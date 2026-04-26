@@ -1,0 +1,77 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Task Diary — Вход{% endblock %}
+
+{% block navbar %}
+    <nav class="navbar navbar-dark bg-primary shadow-sm">
+        <div class="container justify-content-center">
+            <a class="navbar-brand fw-bold fs-4" href="#">
+                📘 Task Diary
+            </a>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block body %}
+    <div class="row justify-content-center mt-4">
+        <div class="col-md-5">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+
+                    <h4 class="text-center fw-bold mb-1">Добро пожаловать</h4>
+                    <p class="text-center text-muted mb-4" style="font-size: 14px;">
+                        Войдите в свой аккаунт
+                    </p>
+
+                    {% if error %}
+                        <div class="alert alert-danger alert-dismissible fade show rounded-3 py-2 px-3" role="alert">
+                            <small>{{ error.messageKey | trans(error.messageData, 'security') }}</small>
+                            <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endif %}
+
+                    <form method="post">
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Email</label>
+                            <input type="text"
+                                   name="_username"
+                                   value="{{ last_username }}"
+                                   autocomplete="username"
+                                   required
+                                   class="form-control"
+                                   placeholder="example@mail.com">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">Пароль</label>
+                            <input type="password"
+                                   name="_password"
+                                   autocomplete="current-password"
+                                   required
+                                   class="form-control"
+                                   placeholder="••••••••">
+                        </div>
+
+                        <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-3">
+                                Войти
+                            </button>
+                        </div>
+
+                    </form>
+
+                    <p class="text-center text-muted mt-3 mb-0" style="font-size: 14px;">
+                        Нет аккаунта?
+                        <a href="{{ path('app_register') }}" class="text-primary fw-semibold text-decoration-none">
+                            Зарегистрироваться
+                        </a>
+                    </p>
+
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

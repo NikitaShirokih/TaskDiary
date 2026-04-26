@@ -1,0 +1,294 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Task Diary - {{ parent is defined and parent ? 'Добавление подзадачи' : 'Добавление задачи' }}{% endblock %}
+
+{% block body %}
+    <div class="container py-4">
+
+        {# ── Хлебные крошки (только для подзадачи) ── #}
+        {% if parent is defined and parent %}
+            <nav aria-label="breadcrumb" class="mb-3">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{{ path('task_list') }}">Задачи</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ path('task_show', {id: parent.id}) }}">{{ parent.title }}</a>
+                    </li>
+                    <li class="breadcrumb-item active" aria-current="page">Новая подзадача</li>
+                </ol>
+            </nav>
+        {% endif %}
+
+        {# ── Заголовок ── #}
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                {% if parent is defined and parent %}
+                    <h1 class="mb-1">➕ Новая подзадача</h1>
+                    <p class="text-muted mb-0">
+                        К задаче:
+                        <a href="{{ path('task_show', {id: parent.id}) }}" class="text-decoration-none fw-semibold">
+                            {{ parent.title }}
+                        </a>
+                        {% if parent.category %}
+                            · <span class="badge rounded-pill text-bg-light border text-dark">{{ parent.category.name }}</span>
+                        {% endif %}
+                    </p>
+                {% else %}
+                    <h1 class="mb-1">➕ Новая задача</h1>
+                    <p class="text-muted mb-0">Создайте новую задачу в вашем дневнике</p>
+                {% endif %}
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{{ path('app_dashboard') }}" class="btn btn-outline-secondary">На главную</a>
+                {% if parent is defined and parent %}
+                    <a href="{{ path('task_show', {id: parent.id}) }}" class="btn btn-outline-primary">К родительской задаче</a>
+                {% else %}
+                    <a href="{{ path('task_list') }}" class="btn btn-outline-primary">К списку задач</a>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ── Flash-сообщения ── #}
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">{{ message }}</div>
+        {% endfor %}
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <h4 class="mb-4">Информация о задаче</h4>
+
+                {% if not (parent is defined and parent) and categories is defined and categories|length == 0 %}
+                    <div class="alert alert-warning">
+                        Категории не найдены. Вы можете создать задачу без категории
+                        или сначала добавить категории.
+                    </div>
+                {% endif %}
+
+                <form method="post">
+                    <input type="hidden" name="_token" value="{{ csrf_token(parent is defined and parent ? 'subtask_create' : 'task_create') }}">
+
+                    {# ── Скрытый parent_id для подзадачи ── #}
+                    {% if parent is defined and parent %}
+                        <input type="hidden" name="parent_id" value="{{ parent.id }}">
+                        <input type="hidden" name="status" value="waiting">
+                    {% endif %}
+
+                    <div class="row g-4">
+
+                        {# Название #}
+                        <div class="col-md-6">
+                            <label for="title" class="form-label fw-semibold">Название задачи</label>
+                            <input
+                                id="title"
+                                type="text"
+                                name="title"
+                                class="form-control"
+                                value="{{ taskData ? taskData.title : app.request.request.get('title') }}"
+                                required
+                            >
+                        </div>
+
+                        {# Приоритет #}
+                        <div class="col-md-6">
+                            <label for="priority" class="form-label fw-semibold">Приоритет</label>
+                            {% set currentPriority = taskData ? taskData.priority : app.request.request.getString('priority', 'medium') %}
+                            <select id="priority" name="priority" class="form-select">
+                                <option value="low"    {{ currentPriority == 'low'    ? 'selected' }}>Низкий</option>
+                                <option value="medium" {{ currentPriority == 'medium' ? 'selected' }}>Средний</option>
+                                <option value="high"   {{ currentPriority == 'high'   ? 'selected' }}>Высокий</option>
+                            </select>
+                        </div>
+
+                        {# Описание #}
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="description" class="form-label fw-semibold mb-0">Описание</label>
+
+                                {# Dropdown с выбором тона #}
+                                <div class="dropdown">
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-secondary dropdown-toggle d-flex align-items-center gap-1"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        id="improve-btn"
+                                    >
+                                        <span id="improve-btn-text">✨ Улучшить с GigaChat</span>
+                                        <span id="improve-btn-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><h6 class="dropdown-header">Выберите стиль</h6></li>
+                                        <li>
+                                            <button type="button" class="dropdown-item improve-option" data-tone="friendly">
+                                                😊 Дружелюбно
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="dropdown-item improve-option" data-tone="angry">
+                                                😤 Требовательно
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="dropdown-item improve-option" data-tone="neutral">
+                                                😐 Нейтрально
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div class="position-relative">
+                                <textarea
+                                    id="description"
+                                    name="description"
+                                    rows="4"
+                                    class="form-control"
+                                >{{ taskData ? taskData.description : app.request.request.get('description') }}</textarea>
+                            </div>
+                            <div id="improve-error" class="text-danger small mt-1 d-none"></div>
+                            <div id="improve-success" class="text-success small mt-1 d-none">
+                                ✅ Описание улучшено! Вы можете отредактировать его перед сохранением.
+                            </div>
+                        </div>
+
+                        {# ── Поля только для обычной задачи ── #}
+                        {% if not (parent is defined and parent) %}
+
+                            {# Дата начала #}
+                            <div class="col-md-6">
+                                <label for="start_time" class="form-label fw-semibold">Дата начала</label>
+                                <input
+                                    id="start_time"
+                                    type="datetime-local"
+                                    name="start_time"
+                                    class="form-control"
+                                    value="{{ taskData and taskData.startTime ? taskData.startTime|date('Y-m-d\\TH:i') : app.request.request.get('start_time') }}"
+                                >
+                            </div>
+
+                            {# Дата окончания #}
+                            <div class="col-md-6">
+                                <label for="end_time" class="form-label fw-semibold">Дата окончания</label>
+                                <input
+                                    id="end_time"
+                                    type="datetime-local"
+                                    name="end_time"
+                                    class="form-control"
+                                    value="{{ taskData and taskData.endTime ? taskData.endTime|date('Y-m-d\\TH:i') : app.request.request.get('end_time') }}"
+                                >
+                            </div>
+
+                            {# Статус #}
+                            <div class="col-md-6">
+                                <label for="status" class="form-label fw-semibold">Статус</label>
+                                {% set currentStatus = taskData ? taskData.status : app.request.request.getString('status', 'waiting') %}
+                                <select id="status" name="status" class="form-select">
+                                    <option value="waiting"     {{ currentStatus == 'waiting'     ? 'selected' }}>Ожидание</option>
+                                    <option value="in_progress" {{ currentStatus == 'in_progress' ? 'selected' }}>В работе</option>
+                                    <option value="completed"   {{ currentStatus == 'completed'   ? 'selected' }}>Завершено</option>
+                                </select>
+                            </div>
+
+                            {# Категория #}
+                            <div class="col-md-6">
+                                <label for="category" class="form-label fw-semibold">Категория</label>
+                                {% set currentCategory = taskData ? taskData.categoryId : app.request.request.get('category') %}
+                                <select id="category" name="category" class="form-select" required>
+                                    <option value="" disabled {{ currentCategory is empty ? 'selected' }}>— Выберите категорию —</option>
+                                    {% for category in categories %}
+                                        <option value="{{ category.id }}" {{ currentCategory == category.id ? 'selected' }}>
+                                            {{ category.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                        {% endif %}{# /not subtask #}
+
+                    </div>{# /row #}
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-primary">
+                            {{ parent is defined and parent ? 'Создать подзадачу' : 'Сохранить задачу' }}
+                        </button>
+                        {% if parent is defined and parent %}
+                            <a href="{{ path('task_show', {id: parent.id}) }}" class="btn btn-light border">Отмена</a>
+                        {% else %}
+                            <a href="{{ path('task_list') }}" class="btn btn-light border">Отмена</a>
+                        {% endif %}
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const btnText      = document.getElementById('improve-btn-text');
+            const spinner      = document.getElementById('improve-btn-spinner');
+            const improveBtn   = document.getElementById('improve-btn');
+            const textarea     = document.getElementById('description');
+            const titleInput   = document.getElementById('title');
+            const errorBlock   = document.getElementById('improve-error');
+            const successBlock = document.getElementById('improve-success');
+
+            document.querySelectorAll('.improve-option').forEach(function (item) {
+                item.addEventListener('click', async function () {
+                    const tone        = this.dataset.tone;
+                    const description = textarea.value.trim();
+                    const title       = titleInput ? titleInput.value.trim() : '';
+
+                    // Сбрасываем сообщения
+                    errorBlock.classList.add('d-none');
+                    successBlock.classList.add('d-none');
+
+                    if (!description) {
+                        errorBlock.textContent = 'Сначала введите описание задачи.';
+                        errorBlock.classList.remove('d-none');
+                        return;
+                    }
+
+                    // Блокируем кнопку, показываем спиннер
+                    btnText.classList.add('d-none');
+                    spinner.classList.remove('d-none');
+                    improveBtn.disabled = true;
+
+                    try {
+                        const response = await fetch('{{ path('task_ai_improve_description') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify({ title, description, tone }),
+                        });
+
+                        const data = await response.json();
+
+                        if (!response.ok || data.error) {
+                            throw new Error(data.error ?? 'Неизвестная ошибка');
+                        }
+
+                        textarea.value = data.result;
+                        successBlock.classList.remove('d-none');
+
+                    } catch (err) {
+                        errorBlock.textContent = '❌ ' + err.message;
+                        errorBlock.classList.remove('d-none');
+                    } finally {
+                        btnText.classList.remove('d-none');
+                        spinner.classList.add('d-none');
+                        improveBtn.disabled = false;
+                    }
+                });
+            });
+        });
+    </script>
+
+{% endblock %}

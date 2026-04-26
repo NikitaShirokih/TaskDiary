@@ -1,0 +1,98 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Аналитика{% endblock %}
+
+{% block body %}
+    <div class="container mt-4">
+        <h1 class="mb-4">Аналитика задач</h1>
+
+        {# Среднее время выполнения #}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">⏱ Среднее время выполнения задачи</h5>
+                <p class="display-6">{{ avgCompletionDays }} дней</p>
+            </div>
+        </div>
+
+        {# Продуктивность по дням #}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">📊 Завершённые задачи по дням</h5>
+                <canvas id="productivityChart"></canvas>
+            </div>
+        </div>
+
+        {# Burndown chart #}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">📉 Burndown chart</h5>
+                <canvas id="burndownChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // --- Продуктивность ---
+        const productivityData = {{ productivityByDays | json_encode | raw }};
+
+        new Chart(document.getElementById('productivityChart'), {
+            type: 'bar',
+            data: {
+                labels: productivityData.map(r => r.date),
+                datasets: [{
+                    label: 'Завершено задач',
+                    data: productivityData.map(r => r.count),
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+
+        // --- Burndown ---
+        const created   = {{ burndownDays.created | json_encode | raw }};
+        const completed = {{ burndownDays.completed | json_encode | raw }};
+
+        const allDates = [...new Set([
+            ...created.map(r => r.date),
+            ...completed.map(r => r.date)
+        ])].sort();
+
+        let totalCreated   = 0;
+        let totalCompleted = 0;
+        const remaining    = [];
+
+        const createdMap   = Object.fromEntries(created.map(r => [r.date, parseInt(r.count)]));
+        const completedMap = Object.fromEntries(completed.map(r => [r.date, parseInt(r.count)]));
+
+        allDates.forEach(date => {
+            totalCreated   += createdMap[date]   ?? 0;
+            totalCompleted += completedMap[date] ?? 0;
+            remaining.push(totalCreated - totalCompleted);
+        });
+
+        new Chart(document.getElementById('burndownChart'), {
+            type: 'line',
+            data: {
+                labels: allDates,
+                datasets: [{
+                    label: 'Оставшиеся задачи',
+                    data: remaining,
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    </script>
+{% endblock %}
