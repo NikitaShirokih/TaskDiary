@@ -56,21 +56,22 @@ class Task
     #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
     private ?Task $parent = null;
 
+    /** @var Collection<int, Task> */
     #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'parent', cascade: ['persist', 'remove'])]
     private Collection $children;
 
     public static function create(
-        User         $user,
-        string       $title,
+        User $user,
+        string $title,
         TaskPriority $priority = TaskPriority::Medium,
-        ?Category    $category = null,
+        ?Category $category = null,
     ): self {
-        $task           = new self();
-        $task->user     = $user;
-        $task->title    = $title;
+        $task = new self();
+        $task->user = $user;
+        $task->title = $title;
         $task->priority = $priority;
         $task->category = $category;
-        $task->status   = TaskStatus::Waiting;
+        $task->status = TaskStatus::Waiting;
         $task->children = new ArrayCollection();
         $task->initCreatedAt();
 
@@ -78,19 +79,21 @@ class Task
     }
 
     public static function createSubtask(
-        Task         $parent,
-        User         $user,
-        string       $title,
+        Task $parent,
+        User $user,
+        string $title,
         TaskPriority $priority = TaskPriority::Medium,
     ): self {
-        $subtask         = self::create($user, $title, $priority);
+        $subtask = self::create($user, $title, $priority);
         $subtask->parent = $parent;
         $parent->children->add($subtask);
 
         return $subtask;
     }
 
-    private function __construct() {}
+    private function __construct()
+    {
+    }
 
     public function rename(string $title): void
     {
@@ -106,12 +109,12 @@ class Task
         ?\DateTimeInterface $startTime,
         ?\DateTimeInterface $endTime,
     ): void {
-        if ($startTime !== null && $endTime !== null && $endTime <= $startTime) {
+        if (null !== $startTime && null !== $endTime && $endTime <= $startTime) {
             throw new \LogicException('Дата окончания должна быть позже даты начала.');
         }
 
         $this->startTime = $startTime;
-        $this->endTime   = $endTime;
+        $this->endTime = $endTime;
     }
 
     public function changePriority(TaskPriority $priority): void
@@ -126,7 +129,7 @@ class Task
 
     public function start(): void
     {
-        if ($this->status === TaskStatus::Completed) {
+        if (TaskStatus::Completed === $this->status) {
             throw new \LogicException('Нельзя возобновить завершённую задачу.');
         }
 
@@ -164,36 +167,75 @@ class Task
         }
     }
 
-    public function getTitle(): string { return $this->title; }
+    public function getTitle(): string
+    {
+        return $this->title;
+    }
 
-    public function getDescription(): ?string { return $this->description; }
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
 
-    public function getStartTime(): ?\DateTimeInterface { return $this->startTime; }
+    public function getStartTime(): ?\DateTimeInterface
+    {
+        return $this->startTime;
+    }
 
-    public function getEndTime(): ?\DateTimeInterface { return $this->endTime; }
+    public function getEndTime(): ?\DateTimeInterface
+    {
+        return $this->endTime;
+    }
 
-    public function getStatus(): TaskStatus { return $this->status; }
+    public function getStatus(): TaskStatus
+    {
+        return $this->status;
+    }
 
-    public function getPriority(): TaskPriority { return $this->priority; }
+    public function getPriority(): TaskPriority
+    {
+        return $this->priority;
+    }
 
-    public function getUser(): User { return $this->user; }
+    public function getUser(): User
+    {
+        return $this->user;
+    }
 
-    public function getCategory(): ?Category { return $this->category; }
+    public function getCategory(): ?Category
+    {
+        return $this->category;
+    }
 
-    public function getParent(): ?Task { return $this->parent; }
+    public function getParent(): ?Task
+    {
+        return $this->parent;
+    }
 
     /** @return Collection<int, Task> */
-    public function getChildren(): Collection { return $this->children; }
+    public function getChildren(): Collection
+    {
+        return $this->children;
+    }
 
-    public function isSubtask(): bool { return $this->parent !== null; }
+    public function isSubtask(): bool
+    {
+        return null !== $this->parent;
+    }
 
-    public function hasChildren(): bool { return !$this->children->isEmpty(); }
+    public function hasChildren(): bool
+    {
+        return !$this->children->isEmpty();
+    }
 
-    public function isCompleted(): bool { return $this->status === TaskStatus::Completed; }
+    public function isCompleted(): bool
+    {
+        return TaskStatus::Completed === $this->status;
+    }
 
     public function isOverdue(): bool
     {
-        return $this->endTime !== null
+        return null !== $this->endTime
             && $this->endTime < new \DateTimeImmutable()
             && !$this->isCompleted();
     }

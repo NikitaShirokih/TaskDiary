@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Entity\User;
 use App\Repository\CategoryRepository;
 use App\Repository\TaskRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,19 +17,20 @@ class DashboardController extends AbstractController
     public function index(TaskRepository $taskRepository, CategoryRepository $categoryRepository): Response
     {
         $user = $this->getUser();
+        assert($user instanceof User);
 
         $latestTasks = $taskRepository->findBy(['user' => $user], ['id' => 'DESC'], 5);
-        $chartData   = $taskRepository->getCategoryChartData($user);
+        $chartData = $taskRepository->getCategoryChartData($user);
 
         $stats = [
-            'activeTasks'      => $taskRepository->countActive($user),
-            'dueTodayTasks'    => $taskRepository->countDueToday($user),
+            'activeTasks' => $taskRepository->countActive($user),
+            'dueTodayTasks' => $taskRepository->countDueToday($user),
             'dueThisWeekTasks' => $taskRepository->countDueThisWeek($user),
         ];
 
         $categoryChart = [
             'labels' => array_column($chartData, 'name'),
-            'data'   => array_map('intval', array_column($chartData, 'count')),
+            'data' => array_map('intval', array_column($chartData, 'count')),
             'colors' => array_column($chartData, 'color'),
         ];
 
@@ -40,9 +42,9 @@ class DashboardController extends AbstractController
         unset($event);
 
         return $this->render('dashboard/index.html.twig', [
-            'stats'          => $stats,
-            'latestTasks'    => $latestTasks,
-            'categoryChart'  => $categoryChart,
+            'stats' => $stats,
+            'latestTasks' => $latestTasks,
+            'categoryChart' => $categoryChart,
             'calendarEvents' => $calendarEvents,
         ]);
     }

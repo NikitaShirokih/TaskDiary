@@ -17,7 +17,7 @@ final class CategoryFixtures extends Fixture
             ['name' => 'Личное',        'color' => '#2ecc71', 'icon' => 'person',        'description' => 'Личные дела и цели'],
             ['name' => 'Учёба',         'color' => '#9b59b6', 'icon' => 'book',          'description' => 'Обучение и саморазвитие'],
             ['name' => 'Здоровье',      'color' => '#e74c3c', 'icon' => 'heart-pulse',   'description' => 'Спорт, здоровье и питание'],
-            ['name' => 'Финансы',       'color' => '#f39c12', 'icon' => 'currency-dollar','description' => 'Финансовые задачи и планирование'],
+            ['name' => 'Финансы',       'color' => '#f39c12', 'icon' => 'currency-dollar', 'description' => 'Финансовые задачи и планирование'],
             ['name' => 'Покупки',       'color' => '#1abc9c', 'icon' => 'cart3',         'description' => 'Список покупок'],
             ['name' => 'Путешествия',   'color' => '#e67e22', 'icon' => 'airplane',      'description' => 'Планирование поездок'],
             ['name' => 'Разное',        'color' => '#95a5a6', 'icon' => 'three-dots',    'description' => 'Всё остальное'],

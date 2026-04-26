@@ -33,3 +33,29 @@
 
 ###> Composer ###
 composer.phar
+
+###> friendsofphp/php-cs-fixer ###
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+###< friendsofphp/php-cs-fixer ###
+.php-cs-fixer.cache
+
+###> phpstan/phpstan ###
+phpstan.neon
+###< phpstan/phpstan ###
+
+###> Environment ###
+/.env.local.php
+/.env.*.local
+
+###> OS ###
+.DS_Store
+Thumbs.db
+
+###> Environment ###
+/.env.local.php
+/.env.*.local
+
+###> OS ###
+.DS_Store
+Thumbs.db

@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Service;
@@ -14,13 +15,14 @@ final class RegistrationService
         private readonly UserRepository $userRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $hasher,
-    ) {}
+    ) {
+    }
 
     public function register(User $user, string $plainPassword): void
     {
         $existing = $this->userRepository->findOneBy(['email' => $user->getEmail()]);
 
-        if ($existing !== null) {
+        if (null !== $existing) {
             throw new \RuntimeException('Аккаунт с таким email уже существует.');
         }
 

@@ -6,6 +6,7 @@ namespace App\Service;
 
 use App\Dto\TaskData;
 use App\Entity\Task;
+use App\Entity\User;
 use App\Enum\TaskPriority;
 use App\Enum\TaskStatus;
 use App\Exception\TaskNotFoundException;
@@ -18,20 +19,23 @@ final class TaskService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly CategoryRepository     $categoryRepository,
-        private readonly TaskRepository         $taskRepository,
-        private readonly Security               $security,
-    ) {}
+        private readonly CategoryRepository $categoryRepository,
+        private readonly TaskRepository $taskRepository,
+        private readonly Security $security,
+    ) {
+    }
 
     public function addTask(TaskData $data): void
     {
-        $user     = $this->security->getUser();
+        $user = $this->security->getUser();
+        assert($user instanceof User); // ← фикс
+
         $category = $this->resolveCategory($data->categoryId);
         $priority = TaskPriority::from((string) $data->priority);
 
         $task = Task::create(
-            user:     $user,
-            title:    trim((string) $data->title),
+            user: $user,
+            title: trim((string) $data->title),
             priority: $priority,
             category: $category,
         );
@@ -45,14 +49,16 @@ final class TaskService
 
     public function addSubtask(int $parentId, TaskData $data): void
     {
-        $parent   = $this->getTaskById($parentId);
-        $user     = $this->security->getUser();
+        $parent = $this->getTaskById($parentId);
+        $user = $this->security->getUser();
+        assert($user instanceof User); // ← фикс
+
         $priority = TaskPriority::from((string) $data->priority);
 
         $subtask = Task::createSubtask(
-            parent:   $parent,
-            user:     $user,
-            title:    trim((string) $data->title),
+            parent: $parent,
+            user: $user,
+            title: trim((string) $data->title),
             priority: $priority,
         );
 
@@ -64,7 +70,7 @@ final class TaskService
 
     public function updateTask(int $id, TaskData $data): void
     {
-        $task     = $this->getTaskById($id);
+        $task = $this->getTaskById($id);
         $category = $this->resolveCategory($data->categoryId);
 
         $task->rename(trim((string) $data->title));
@@ -80,16 +86,14 @@ final class TaskService
 
     public function updateStatus(int $id, ?string $status): void
     {
-        $task       = $this->getTaskById($id);
+        $task = $this->getTaskById($id);
         $taskStatus = TaskStatus::tryFrom((string) $status)
-            ?? throw new \InvalidArgumentException(
-                sprintf('Некорректный статус: "%s".', $status)
-            );
+            ?? throw new \InvalidArgumentException(sprintf('Некорректный статус: "%s".', $status));
 
         match ($taskStatus) {
             TaskStatus::InProgress => $task->start(),
-            TaskStatus::Completed  => $task->complete(),
-            TaskStatus::Waiting    => $task->reopen(),
+            TaskStatus::Completed => $task->complete(),
+            TaskStatus::Waiting => $task->reopen(),
         };
 
         $this->entityManager->flush();
@@ -106,21 +110,17 @@ final class TaskService
     public function getTaskById(int $id): Task
     {
         return $this->taskRepository->find($id)
-            ?? throw new TaskNotFoundException(
-                sprintf('Задача #%d не найдена.', $id)
-            );
+            ?? throw new TaskNotFoundException(sprintf('Задача #%d не найдена.', $id));
     }
 
     private function resolveCategory(?int $categoryId): ?\App\Entity\Category
     {
-        if ($categoryId === null) {
+        if (null === $categoryId) {
             return null;
         }
 
         return $this->categoryRepository->find($categoryId)
-            ?? throw new \RuntimeException(
-                sprintf('Категория #%d не найдена.', $categoryId)
-            );
+            ?? throw new \RuntimeException(sprintf('Категория #%d не найдена.', $categoryId));
     }
 
     private function applyScheduleAndDescription(Task $task, TaskData $data): void
@@ -133,14 +133,14 @@ final class TaskService
     {
         $taskStatus = TaskStatus::tryFrom((string) $status);
 
-        if ($taskStatus === null) {
+        if (null === $taskStatus) {
             return;
         }
 
         match ($taskStatus) {
             TaskStatus::InProgress => $task->start(),
-            TaskStatus::Completed  => $task->complete(),
-            TaskStatus::Waiting    => $task->reopen(),
+            TaskStatus::Completed => $task->complete(),
+            TaskStatus::Waiting => $task->reopen(),
         };
     }
 }

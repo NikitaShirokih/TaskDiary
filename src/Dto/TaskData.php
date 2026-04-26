@@ -43,22 +43,23 @@ final class TaskData
         public readonly ?int $categoryId,
 
         public readonly ?int $parentId = null,
-    ) {}
+    ) {
+    }
 
     public static function fromRequest(Request $request): self
     {
         $categoryId = $request->request->get('category');
-        $parentId   = $request->request->get('parent_id');
+        $parentId = $request->request->get('parent_id');
 
         return new self(
-            title:       trim((string) $request->request->get('title')),
+            title: trim((string) $request->request->get('title')),
             description: $request->request->get('description'),
-            priority:    $request->request->getString('priority', 'medium'),
-            status:      $request->request->getString('status', 'waiting'),
-            startTime:   self::parseDateTime($request->request->get('start_time'), 'Дата начала'),
-            endTime:     self::parseDateTime($request->request->get('end_time'), 'Дата окончания'),
-            categoryId:  $categoryId !== null && $categoryId !== '' ? (int) $categoryId : null,
-            parentId:    $parentId !== null && $parentId !== '' ? (int) $parentId : null,
+            priority: $request->request->getString('priority', 'medium'),
+            status: $request->request->getString('status', 'waiting'),
+            startTime: self::parseDateTime($request->request->get('start_time'), 'Дата начала'),
+            endTime: self::parseDateTime($request->request->get('end_time'), 'Дата окончания'),
+            categoryId: null !== $categoryId && '' !== $categoryId ? (int) $categoryId : null,
+            parentId: null !== $parentId && '' !== $parentId ? (int) $parentId : null,
         );
     }
 
@@ -67,34 +68,32 @@ final class TaskData
         $base = self::fromRequest($request);
 
         return new self(
-            title:       $base->title,
+            title: $base->title,
             description: $base->description,
-            priority:    $base->priority,
-            status:      $base->status,
-            startTime:   $base->startTime,
-            endTime:     $base->endTime,
-            categoryId:  null, // подзадача не имеет своей категории
-            parentId:    $parentId,
+            priority: $base->priority,
+            status: $base->status,
+            startTime: $base->startTime,
+            endTime: $base->endTime,
+            categoryId: null, // подзадача не имеет своей категории
+            parentId: $parentId,
         );
     }
 
     public function isSubtask(): bool
     {
-        return $this->parentId !== null;
+        return null !== $this->parentId;
     }
 
     private static function parseDateTime(?string $value, string $fieldName): ?\DateTimeImmutable
     {
-        if ($value === null || $value === '') {
+        if (null === $value || '' === $value) {
             return null;
         }
 
         $date = \DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $value);
 
-        if ($date === false) {
-            throw new \InvalidArgumentException(
-                sprintf('%s имеет некорректный формат.', $fieldName)
-            );
+        if (false === $date) {
+            throw new \InvalidArgumentException(sprintf('%s имеет некорректный формат.', $fieldName));
         }
 
         return $date;

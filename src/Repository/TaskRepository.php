@@ -11,6 +11,9 @@ use App\Enum\TaskStatus;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
+/**
+ * @extends ServiceEntityRepository<Task>
+ */
 final class TaskRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -18,11 +21,14 @@ final class TaskRepository extends ServiceEntityRepository
         parent::__construct($registry, Task::class);
     }
 
+    /**
+     * @return array<int, Task>
+     */
     public function findTasksByView(
-        ?int    $categoryId = null,
-        ?string $priority   = null,
-        string  $view       = 'active',
-        ?User   $user       = null,
+        ?int $categoryId = null,
+        ?string $priority = null,
+        string $view = 'active',
+        ?User $user = null,
     ): array {
         $qb = $this->createQueryBuilder('t')
             ->leftJoin('t.children', 'sub')
@@ -30,23 +36,23 @@ final class TaskRepository extends ServiceEntityRepository
             ->andWhere('t.parent IS NULL')
             ->orderBy('t.createdAt', 'DESC');
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
 
-        if ($categoryId !== null) {
+        if (null !== $categoryId) {
             $qb->leftJoin('t.category', 'c')
                 ->andWhere('c.id = :categoryId')
                 ->setParameter('categoryId', $categoryId);
         }
 
-        if ($priority !== null && TaskPriority::tryFrom($priority) !== null) {
+        if (null !== $priority && null !== TaskPriority::tryFrom($priority)) {
             $qb->andWhere('t.priority = :priority')
                 ->setParameter('priority', TaskPriority::from($priority)->value);
         }
 
-        if ($view === 'completed') {
+        if ('completed' === $view) {
             $qb->andWhere('t.status = :completed')
                 ->setParameter('completed', TaskStatus::Completed->value);
         } else {
@@ -60,12 +66,13 @@ final class TaskRepository extends ServiceEntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    /**
+     * @return array<int, Task>
+     */
     public function findByStatus(string $status): array
     {
         $taskStatus = TaskStatus::tryFrom($status)
-            ?? throw new \InvalidArgumentException(
-                sprintf('Некорректный статус: "%s"', $status)
-            );
+            ?? throw new \InvalidArgumentException(sprintf('Некорректный статус: "%s"', $status));
 
         return $this->createQueryBuilder('t')
             ->andWhere('t.status = :status')
@@ -75,12 +82,13 @@ final class TaskRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @return array<int, Task>
+     */
     public function findByPriority(string $priority): array
     {
         $taskPriority = TaskPriority::tryFrom($priority)
-            ?? throw new \InvalidArgumentException(
-                sprintf('Некорректный приоритет: "%s"', $priority)
-            );
+            ?? throw new \InvalidArgumentException(sprintf('Некорректный приоритет: "%s"', $priority));
 
         return $this->createQueryBuilder('t')
             ->andWhere('t.priority = :priority')
@@ -90,16 +98,19 @@ final class TaskRepository extends ServiceEntityRepository
             ->getResult();
     }
 
+    /**
+     * @return array<int, Task>
+     */
     public function findTodayTasks(?User $user = null): array
     {
         $qb = $this->createQueryBuilder('t')
             ->andWhere('t.startTime >= :today')
             ->andWhere('t.startTime < :tomorrow')
-            ->setParameter('today',    new \DateTimeImmutable('today'))
+            ->setParameter('today', new \DateTimeImmutable('today'))
             ->setParameter('tomorrow', new \DateTimeImmutable('tomorrow'))
             ->orderBy('t.startTime', 'ASC');
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -107,16 +118,19 @@ final class TaskRepository extends ServiceEntityRepository
         return $qb->getQuery()->getResult();
     }
 
+    /**
+     * @return array<int, Task>
+     */
     public function findOverdueTasks(?User $user = null): array
     {
         $qb = $this->createQueryBuilder('t')
             ->andWhere('t.endTime < :now')
             ->andWhere('t.status != :completed')
-            ->setParameter('now',       new \DateTimeImmutable())
+            ->setParameter('now', new \DateTimeImmutable())
             ->setParameter('completed', TaskStatus::Completed->value)
             ->orderBy('t.endTime', 'ASC');
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -129,7 +143,7 @@ final class TaskRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('t')
             ->select('COUNT(t.id)');
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -144,7 +158,7 @@ final class TaskRepository extends ServiceEntityRepository
             ->andWhere('t.status = :status')
             ->setParameter('status', $status->value);
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -158,10 +172,10 @@ final class TaskRepository extends ServiceEntityRepository
             ->select('COUNT(t.id)')
             ->andWhere('t.endTime < :now')
             ->andWhere('t.status != :completed')
-            ->setParameter('now',       new \DateTimeImmutable())
+            ->setParameter('now', new \DateTimeImmutable())
             ->setParameter('completed', TaskStatus::Completed->value);
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -179,7 +193,7 @@ final class TaskRepository extends ServiceEntityRepository
                 TaskStatus::InProgress->value,
             ]);
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -195,13 +209,13 @@ final class TaskRepository extends ServiceEntityRepository
             ->andWhere('t.endTime < :endOfDay')
             ->andWhere('t.status NOT IN (:done)')
             ->setParameter('startOfDay', new \DateTimeImmutable('today'))
-            ->setParameter('endOfDay',   new \DateTimeImmutable('tomorrow'))
+            ->setParameter('endOfDay', new \DateTimeImmutable('tomorrow'))
             ->setParameter('done', [
                 TaskStatus::Completed->value,
                 TaskStatus::InProgress->value,
             ]);
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -216,11 +230,11 @@ final class TaskRepository extends ServiceEntityRepository
             ->andWhere('t.endTime >= :now')
             ->andWhere('t.endTime < :inWeek')
             ->andWhere('t.status NOT IN (:done)')
-            ->setParameter('now',    new \DateTimeImmutable())
+            ->setParameter('now', new \DateTimeImmutable())
             ->setParameter('inWeek', new \DateTimeImmutable('+7 days'))
             ->setParameter('done', [TaskStatus::Completed->value]);
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -228,6 +242,9 @@ final class TaskRepository extends ServiceEntityRepository
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getStatistics(?User $user = null): array
     {
         $qb = $this->createQueryBuilder('t')
@@ -238,12 +255,12 @@ final class TaskRepository extends ServiceEntityRepository
                 SUM(CASE WHEN t.status = :completed   THEN 1 ELSE 0 END) as completed,
                 SUM(CASE WHEN t.endTime < :now AND t.status != :completed THEN 1 ELSE 0 END) as overdue
             ')
-            ->setParameter('waiting',     TaskStatus::Waiting->value)
+            ->setParameter('waiting', TaskStatus::Waiting->value)
             ->setParameter('in_progress', TaskStatus::InProgress->value)
-            ->setParameter('completed',   TaskStatus::Completed->value)
-            ->setParameter('now',         new \DateTimeImmutable());
+            ->setParameter('completed', TaskStatus::Completed->value)
+            ->setParameter('now', new \DateTimeImmutable());
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -251,6 +268,9 @@ final class TaskRepository extends ServiceEntityRepository
         return $qb->getQuery()->getSingleResult();
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function getCategoryChartData(?User $user = null): array
     {
         $qb = $this->createQueryBuilder('t')
@@ -260,7 +280,7 @@ final class TaskRepository extends ServiceEntityRepository
             ->groupBy('c.id')
             ->orderBy('count', 'DESC');
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -268,6 +288,9 @@ final class TaskRepository extends ServiceEntityRepository
         return $qb->getQuery()->getArrayResult();
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function getCalendarEvents(?User $user = null): array
     {
         $qb = $this->createQueryBuilder('t')
@@ -278,7 +301,7 @@ final class TaskRepository extends ServiceEntityRepository
             ->andWhere('t.status != :completed')
             ->setParameter('completed', TaskStatus::Completed->value);
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -286,7 +309,7 @@ final class TaskRepository extends ServiceEntityRepository
         $tasks = $qb->getQuery()->getResult();
 
         return array_map(
-            static fn(Task $task): array => [
+            static fn (Task $task): array => [
                 'title' => $task->getTitle(),
                 'start' => $task->getStartTime()->format('Y-m-d\TH:i:s'),
                 'color' => $task->getCategory()?->getColor()
@@ -317,12 +340,15 @@ final class TaskRepository extends ServiceEntityRepository
     private static function resolveStatusColor(TaskStatus $status): string
     {
         return match ($status) {
-            TaskStatus::Completed  => '#198754',
+            TaskStatus::Completed => '#198754',
             TaskStatus::InProgress => '#ffc107',
-            TaskStatus::Waiting    => '#6c757d',
+            TaskStatus::Waiting => '#6c757d',
         };
     }
 
+    /**
+     * @return array<int, array<string, mixed>>
+     */
     public function getProductivityByDays(?User $user = null): array
     {
         $qb = $this->createQueryBuilder('t')
@@ -330,12 +356,12 @@ final class TaskRepository extends ServiceEntityRepository
             ->andWhere('t.parent IS NULL')
             ->andWhere('t.status = :completed')
             ->andWhere('t.updatedAt >= :from')
-            ->setParameter('from', new \DateTimeImmutable("-30 days"))
+            ->setParameter('from', new \DateTimeImmutable('-30 days'))
             ->setParameter('completed', TaskStatus::Completed->value)
             ->groupBy('date')
             ->orderBy('date', 'ASC');
 
-        if ($user !== null) {
+        if (null !== $user) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -352,21 +378,24 @@ final class TaskRepository extends ServiceEntityRepository
             WHERE t.parent_id IS NULL
               AND t.status = :completed
               AND t.updated_at >= :from'
-            . ($user !== null ? ' AND t.user_id = :user' : '');
+            .(null !== $user ? ' AND t.user_id = :user' : '');
 
         $params = [
             'completed' => TaskStatus::Completed->value,
-            'from'      => (new \DateTimeImmutable('-30 days'))->format('Y-m-d H:i:s'),
+            'from' => (new \DateTimeImmutable('-30 days'))->format('Y-m-d H:i:s'),
         ];
-        if ($user !== null) {
+        if (null !== $user) {
             $params['user'] = $user->getId();
         }
 
         $result = $conn->fetchOne($sql, $params);
+
         return round((float) $result / 86400, 1);
     }
 
-
+    /**
+     * @return array{created: array<int, array<string, mixed>>, completed: array<int, array<string, mixed>>}
+     */
     public function getBurndownData(?User $user = null): array
     {
         $from = new \DateTimeImmutable('-30 days');
@@ -389,13 +418,13 @@ final class TaskRepository extends ServiceEntityRepository
             ->groupBy('date')
             ->orderBy('date', 'ASC');
 
-        if ($user !== null) {
+        if (null !== $user) {
             $createdQb->andWhere('t.user = :user')->setParameter('user', $user);
             $completedQb->andWhere('t.user = :user')->setParameter('user', $user);
         }
 
         return [
-            'created'   => $createdQb->getQuery()->getArrayResult(),
+            'created' => $createdQb->getQuery()->getArrayResult(),
             'completed' => $completedQb->getQuery()->getArrayResult(),
         ];
     }

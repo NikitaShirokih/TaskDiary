@@ -33,6 +33,7 @@ class Category
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $icon = null;
 
+    /** @var Collection<int, Task> */
     #[ORM\OneToMany(targetEntity: Task::class, mappedBy: 'category')]
     private Collection $tasks;
 
@@ -96,6 +97,7 @@ class Category
         return $this;
     }
 
+    /** @return Collection<int, Task> */
     public function getTasks(): Collection
     {
         return $this->tasks;

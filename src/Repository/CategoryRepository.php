@@ -8,6 +8,9 @@ use App\Entity\Category;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
+/**
+ * @extends ServiceEntityRepository<Category>
+ */
 class CategoryRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry)
@@ -15,6 +18,9 @@ class CategoryRepository extends ServiceEntityRepository
         parent::__construct($registry, Category::class);
     }
 
+    /**
+     * @return array<int, Category>
+     */
     public function findAllOrdered(): array
     {
         return $this->createQueryBuilder('c')
@@ -42,6 +48,9 @@ class CategoryRepository extends ServiceEntityRepository
                 ->getSingleScalarResult() > 0;
     }
 
+    /**
+     * @return array<int, Category>
+     */
     public function findAllWithTaskCount(): array
     {
         return $this->createQueryBuilder('c')

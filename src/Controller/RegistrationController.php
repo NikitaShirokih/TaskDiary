@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace App\Controller;
@@ -15,12 +16,13 @@ final class RegistrationController extends AbstractController
 {
     public function __construct(
         private readonly RegistrationService $registrationService,
-    ) {}
+    ) {
+    }
 
     #[Route('/register', name: 'app_register')]
     public function register(Request $request): Response
     {
-        if ($this->getUser() !== null) {
+        if (null !== $this->getUser()) {
             return $this->redirectToRoute('app_dashboard');
         }
 
@@ -35,8 +37,8 @@ final class RegistrationController extends AbstractController
                 );
 
                 $this->addFlash('success', 'Аккаунт успешно создан! Войдите в систему.');
-                return $this->redirectToRoute('app_login');
 
+                return $this->redirectToRoute('app_login');
             } catch (\RuntimeException $e) {
                 $this->addFlash('error', $e->getMessage());
             }
