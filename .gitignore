@@ -38,12 +38,12 @@ composer.phar
 
 ###> friendsofphp/php-cs-fixer ###
 /.php-cs-fixer.php
-/.docker/.php-cs-fixer.cache
+/.php-cs-fixer.cache
 ###< friendsofphp/php-cs-fixer ###
-.docker/.php-cs-fixer.cache
+.php-cs-fixer.cache
 
 ###> phpstan/phpstan ###
-.docker/phpstan.neon
+phpstan.neon
 ###< phpstan/phpstan ###
 
 ###> Environment ###
