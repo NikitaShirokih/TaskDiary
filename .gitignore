@@ -2,6 +2,7 @@
 ###> symfony/framework-bundle ###
 /.env.local
 /.env.test
+/.env
 
 /config/secrets/prod/prod.decrypt.private.php
 /public/bundles/
@@ -37,12 +38,12 @@ composer.phar
 
 ###> friendsofphp/php-cs-fixer ###
 /.php-cs-fixer.php
-/.php-cs-fixer.cache
+/.docker/.php-cs-fixer.cache
 ###< friendsofphp/php-cs-fixer ###
-.php-cs-fixer.cache
+.docker/.php-cs-fixer.cache
 
 ###> phpstan/phpstan ###
-phpstan.neon
+.docker/phpstan.neon
 ###< phpstan/phpstan ###
 
 ###> Environment ###
