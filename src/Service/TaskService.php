@@ -28,7 +28,7 @@ final class TaskService
     public function addTask(TaskData $data): void
     {
         $user = $this->security->getUser();
-        assert($user instanceof User); // ← фикс
+        assert($user instanceof User);
 
         $category = $this->resolveCategory($data->categoryId);
         $priority = TaskPriority::from((string) $data->priority);
@@ -51,7 +51,7 @@ final class TaskService
     {
         $parent = $this->getTaskById($parentId);
         $user = $this->security->getUser();
-        assert($user instanceof User); // ← фикс
+        assert($user instanceof User);
 
         $priority = TaskPriority::from((string) $data->priority);
 
