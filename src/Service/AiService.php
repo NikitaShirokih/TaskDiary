@@ -2,18 +2,30 @@
 
 namespace App\Service;
 
+use App\Enum\ToneAi;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use App\Builder\PromptBuilder;
+use App\Builder\AnalyzeTaskPromptBuilder;
+use Symfony\Component\Uid\Uuid;
+
 
 class AiService
 {
+    private ?string $accessToken = null;
+
     public function __construct(
-        private HttpClientInterface $httpClient,
-        private string $apiKey,
+        private readonly HttpClientInterface $httpClient,
+        private readonly string              $apiKey,
     ) {
     }
 
+
     private function getAccessToken(): string
     {
+        if ($this->accessToken !== null) {
+            return $this->accessToken;
+        }
+
         $response = $this->httpClient->request(
             'POST',
             'https://ngw.devices.sberbank.ru:9443/api/v2/oauth',
@@ -21,7 +33,7 @@ class AiService
                 'verify_peer' => false,
                 'verify_host' => false,
                 'headers' => [
-                    'Authorization' => 'Basic '.$this->apiKey,
+                    'Authorization' => 'Basic ' . $this->apiKey,
                     'Content-Type' => 'application/x-www-form-urlencoded',
                     'RqUID' => $this->generateUuid(),
                 ],
@@ -29,29 +41,31 @@ class AiService
             ]
         );
 
-        $data = $response->toArray();
-
-        if (!isset($data['access_token'])) {
-            throw new \RuntimeException('GigaChat: не удалось получить токен. Ответ: '.json_encode($data));
-        }
-
-        return $data['access_token'];
+        return $this->accessToken = $response->toArray()['access_token']
+            ?? throw new \RuntimeException('GigaChat: не удалось получить токен.');
     }
+
+    private function getAuthHeaders(): array
+    {
+        return [
+            'Authorization' => 'Bearer ' . $this->getAccessToken(),
+            'Content-Type' => 'application/json',
+        ];
+    }
+
 
     public function analyzeTask(string $title, ?string $description): string
     {
-        $token = $this->getAccessToken();
+        $title = trim($title);
 
-        $userText = "Задача: {$title}\n";
-
-        if ($description) {
-            $userText .= "Описание: {$description}\n";
+        if ('' === $title) {
+            throw new \InvalidArgumentException('Название задачи не может быть пустым');
         }
 
-        $userText .= "\nДай краткий структурированный совет:\n"
-            ."1. Как лучше выполнить эту задачу\n"
-            ."2. На что обратить внимание\n"
-            .'3. Предложи 2-3 подзадачи';
+        $prompt = (new AnalyzeTaskPromptBuilder())
+            ->title($title)
+            ->description($description)
+            ->build();
 
         $response = $this->httpClient->request(
             'POST',
@@ -59,10 +73,8 @@ class AiService
             [
                 'verify_peer' => false,
                 'verify_host' => false,
-                'headers' => [
-                    'Authorization' => 'Bearer '.$token,
-                    'Content-Type' => 'application/json',
-                ],
+                'timeout' => 30,
+                'headers' => $this->getAuthHeaders(),
                 'json' => [
                     'model' => 'GigaChat',
                     'messages' => [
@@ -72,7 +84,7 @@ class AiService
                         ],
                         [
                             'role' => 'user',
-                            'content' => $userText,
+                            'content' => $prompt,
                         ],
                     ],
                     'temperature' => 0.6,
@@ -81,31 +93,23 @@ class AiService
             ]
         );
 
-        $data = $response->toArray();
+        $content = $response->toArray()['choices'][0]['message']['content'] ?? null;
 
-        return $data['choices'][0]['message']['content'] ?? 'Нет ответа от AI';
+        if (!is_string($content) || '' === trim($content)) {
+            throw new \RuntimeException('AI не вернул содержательный ответ');
+        }
+
+        return trim($content);
     }
 
-    public function improveDescription(string $title, string $description, string $tone = 'neutral'): string
+
+    public function improveDescription(string $title, string $description, ToneAi $tone = ToneAi::Neutral): string
     {
-        $token = $this->getAccessToken();
-
-        $toneInstruction = match ($tone) {
-            'friendly' => 'Перепиши описание в дружелюбном, тёплом и позитивном стиле.',
-            'angry' => 'Перепиши описание в требовательном, жёстком и срочном стиле.',
-            default => 'Перепиши описание в нейтральном, чётком и профессиональном стиле.',
-        };
-
-        $prompt = "{$toneInstruction} Улучши ТОЛЬКО описание задачи. Не включай название в ответ.\n"
-            ."Название задачи (только для контекста): {$title}\n"
-            ."Текущее описание: {$description}\n\n"
-            ."Требования:\n"
-            ."- Верни ТОЛЬКО улучшенный текст описания\n"
-            ."- Не повторяй название задачи в ответе\n"
-            ."- Не добавляй заголовки, подписи и пояснения\n"
-            ."- Сохрани смысл оригинала\n"
-            ."- Без markdown-разметки\n"
-            .'- Максимум 3-4 предложения';
+        $prompt = (new PromptBuilder())
+            ->title($title)
+            ->description($description)
+            ->tone($tone)
+            ->build();
 
         $response = $this->httpClient->request(
             'POST',
@@ -113,10 +117,7 @@ class AiService
             [
                 'verify_peer' => false,
                 'verify_host' => false,
-                'headers' => [
-                    'Authorization' => 'Bearer '.$token,
-                    'Content-Type' => 'application/json',
-                ],
+                'headers' => $this->getAuthHeaders(),
                 'json' => [
                     'model' => 'GigaChat',
                     'messages' => [
@@ -135,21 +136,13 @@ class AiService
             ]
         );
 
-        $data = $response->toArray();
-
-        return $data['choices'][0]['message']['content'] ?? 'Нет ответа от AI';
+        $content = $response->toArray()['choices'][0]['message']['content'] ?? 'Нет ответа от AI';
+        return trim($content);
     }
 
     // ── Вспомогательный метод: UUID v4 ────────────────────────────────────
     private function generateUuid(): string
     {
-        return sprintf(
-            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xFFFF), mt_rand(0, 0xFFFF),
-            mt_rand(0, 0xFFFF),
-            mt_rand(0, 0x0FFF) | 0x4000,
-            mt_rand(0, 0x3FFF) | 0x8000,
-            mt_rand(0, 0xFFFF), mt_rand(0, 0xFFFF), mt_rand(0, 0xFFFF)
-        );
+        return Uuid::v4()->toRfc4122();
     }
 }
