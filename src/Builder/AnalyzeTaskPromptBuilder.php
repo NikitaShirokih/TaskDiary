@@ -7,7 +7,9 @@ namespace App\Builder;
 class AnalyzeTaskPromptBuilder
 {
     private string $title = '';
+
     private string $description = '';
+
     public function title(string $title): self
     {
         $this->title = trim($title);

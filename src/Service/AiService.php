@@ -1,72 +1,81 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service;
 
-use App\Enum\ToneAi;
-use Symfony\Contracts\HttpClient\HttpClientInterface;
 use App\Builder\PromptBuilder;
-use App\Builder\AnalyzeTaskPromptBuilder;
+use App\Contract\PromptBuilderInterface;
+use App\Entity\Task;
+use App\Enum\ToneAi;
+use App\Prompt\TaskPromptContextFactory;
+use RuntimeException;
 use Symfony\Component\Uid\Uuid;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 
-class AiService
+final class AiService
 {
     private ?string $accessToken = null;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly string              $apiKey,
+        private readonly string $apiKey,
+        private readonly PromptBuilderInterface $promptBuilder,
+        private readonly TaskPromptContextFactory $taskPromptContextFactory,
     ) {
     }
 
-
-    private function getAccessToken(): string
+    public function analyzeTask(Task $task): string
     {
-        if ($this->accessToken !== null) {
-            return $this->accessToken;
-        }
+        $promptData = $this->taskPromptContextFactory->create($task);
 
-        $response = $this->httpClient->request(
-            'POST',
-            'https://ngw.devices.sberbank.ru:9443/api/v2/oauth',
-            [
-                'verify_peer' => false,
-                'verify_host' => false,
-                'headers' => [
-                    'Authorization' => 'Basic ' . $this->apiKey,
-                    'Content-Type' => 'application/x-www-form-urlencoded',
-                    'RqUID' => $this->generateUuid(),
-                ],
-                'body' => 'scope=GIGACHAT_API_PERS',
-            ]
+        $prompt = $this->promptBuilder->build($promptData);
+
+        return $this->askGigaChat(
+            systemMessage: 'Ты умный помощник по управлению задачами. Отвечай на русском языке, кратко, структурированно и по делу. Не используй markdown-разметку.',
+            userPrompt: $prompt,
+            temperature: 0.6,
+            maxTokens: 500,
         );
-
-        return $this->accessToken = $response->toArray()['access_token']
-            ?? throw new \RuntimeException('GigaChat: не удалось получить токен.');
     }
 
-    private function getAuthHeaders(): array
-    {
-        return [
-            'Authorization' => 'Bearer ' . $this->getAccessToken(),
-            'Content-Type' => 'application/json',
-        ];
-    }
-
-
-    public function analyzeTask(string $title, ?string $description): string
-    {
+    public function improveDescription(
+        string $title,
+        string $description,
+        ToneAi $tone = ToneAi::Neutral,
+    ): string {
         $title = trim($title);
+        $description = trim($description);
 
         if ('' === $title) {
             throw new \InvalidArgumentException('Название задачи не может быть пустым');
         }
 
-        $prompt = (new AnalyzeTaskPromptBuilder())
+        if ('' === $description) {
+            throw new \InvalidArgumentException('Описание задачи не может быть пустым');
+        }
+
+        $prompt = (new PromptBuilder())
             ->title($title)
             ->description($description)
+            ->tone($tone)
             ->build();
 
+        return $this->askGigaChat(
+            systemMessage: 'Ты помощник по улучшению текста задач. Ты возвращаешь ТОЛЬКО улучшенный текст описания — без названия, без заголовков, без пояснений.',
+            userPrompt: $prompt,
+            temperature: 0.7,
+            maxTokens: 300,
+        );
+    }
+
+    private function askGigaChat(
+        string $systemMessage,
+        string $userPrompt,
+        float $temperature,
+        int $maxTokens,
+    ): string {
         $response = $this->httpClient->request(
             'POST',
             'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
@@ -80,15 +89,15 @@ class AiService
                     'messages' => [
                         [
                             'role' => 'system',
-                            'content' => 'Ты умный помощник по управлению задачами. Отвечай на русском языке, кратко, структурированно и по делу. Не используй markdown-разметку.',
+                            'content' => $systemMessage,
                         ],
                         [
                             'role' => 'user',
-                            'content' => $prompt,
+                            'content' => $userPrompt,
                         ],
                     ],
-                    'temperature' => 0.6,
-                    'max_tokens' => 500,
+                    'temperature' => $temperature,
+                    'max_tokens' => $maxTokens,
                 ],
             ]
         );
@@ -96,51 +105,53 @@ class AiService
         $content = $response->toArray()['choices'][0]['message']['content'] ?? null;
 
         if (!is_string($content) || '' === trim($content)) {
-            throw new \RuntimeException('AI не вернул содержательный ответ');
+            throw new RuntimeException('AI не вернул содержательный ответ');
         }
 
         return trim($content);
     }
 
-
-    public function improveDescription(string $title, string $description, ToneAi $tone = ToneAi::Neutral): string
+    private function getAccessToken(): string
     {
-        $prompt = (new PromptBuilder())
-            ->title($title)
-            ->description($description)
-            ->tone($tone)
-            ->build();
+        if (null !== $this->accessToken) {
+            return $this->accessToken;
+        }
 
         $response = $this->httpClient->request(
             'POST',
-            'https://gigachat.devices.sberbank.ru/api/v1/chat/completions',
+            'https://ngw.devices.sberbank.ru:9443/api/v2/oauth',
             [
                 'verify_peer' => false,
                 'verify_host' => false,
-                'headers' => $this->getAuthHeaders(),
-                'json' => [
-                    'model' => 'GigaChat',
-                    'messages' => [
-                        [
-                            'role' => 'system',
-                            'content' => 'Ты помощник по улучшению текста задач. Ты возвращаешь ТОЛЬКО улучшенный текст описания — без названия, без заголовков, без пояснений.',
-                        ],
-                        [
-                            'role' => 'user',
-                            'content' => $prompt,
-                        ],
-                    ],
-                    'temperature' => 0.7,
-                    'max_tokens' => 300,
+                'headers' => [
+                    'Authorization' => 'Basic '.$this->apiKey,
+                    'Content-Type' => 'application/x-www-form-urlencoded',
+                    'RqUID' => $this->generateUuid(),
                 ],
+                'body' => 'scope=GIGACHAT_API_PERS',
             ]
         );
 
-        $content = $response->toArray()['choices'][0]['message']['content'] ?? 'Нет ответа от AI';
-        return trim($content);
+        $accessToken = $response->toArray()['access_token'] ?? null;
+
+        if (!is_string($accessToken) || '' === trim($accessToken)) {
+            throw new RuntimeException('GigaChat: не удалось получить токен.');
+        }
+
+        return $this->accessToken = $accessToken;
     }
 
-    // ── Вспомогательный метод: UUID v4 ────────────────────────────────────
+    /**
+     * @return array<string, string>
+     */
+    private function getAuthHeaders(): array
+    {
+        return [
+            'Authorization' => 'Bearer '.$this->getAccessToken(),
+            'Content-Type' => 'application/json',
+        ];
+    }
+
     private function generateUuid(): string
     {
         return Uuid::v4()->toRfc4122();
