@@ -52,18 +52,18 @@ final readonly class TaskRelationTreeRenderer
     {
         $lines = [];
 
-        if (null !== $node->description) {
+        if ($node->description !== null) {
             $lines[] = sprintf('%s  Описание: %s', $indent, $node->description);
         }
 
         $lines[] = sprintf('%s  Статус: %s', $indent, $node->status);
         $lines[] = sprintf('%s  Приоритет: %s', $indent, $node->priority);
 
-        if (null !== $node->type) {
+        if ($node->type!== null) {
             $lines[] = sprintf('%s  Тип: %s', $indent, $node->type);
         }
 
-        if (null !== $node->startTime) {
+        if ($node->startTime !== null) {
             $lines[] = sprintf(
                 '%s  Начало: %s',
                 $indent,
@@ -71,7 +71,7 @@ final readonly class TaskRelationTreeRenderer
             );
         }
 
-        if (null !== $node->endTime) {
+        if ($node->endTime !== null) {
             $lines[] = sprintf(
                 '%s  Окончание: %s',
                 $indent,

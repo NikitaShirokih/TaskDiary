@@ -13,7 +13,7 @@ final class CategoryBuilder
      */
     public function build(?Category $category): ?array
     {
-        if (null === $category) {
+        if ($category === null) {
             return null;
         }
 

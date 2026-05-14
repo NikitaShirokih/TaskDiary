@@ -102,7 +102,7 @@ final readonly class TaskPromptContextFactory
 
         $parent = $task->getParent();
 
-        if (null !== $parent) {
+        if ($parent !== null) {
             $relations[] = [
                 'task' => $parent,
                 'type' => TaskRelationType::Parent,
@@ -205,7 +205,7 @@ TEXT;
 
     private function sanitizeNullable(?string $value): ?string
     {
-        if (null === $value) {
+        if ($value === null) {
             return null;
         }
 
