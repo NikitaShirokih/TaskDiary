@@ -245,7 +245,9 @@
             const successBlock = document.getElementById('improve-success');
 
             document.querySelectorAll('.improve-option').forEach(function (item) {
-                item.addEventListener('click', async function () {
+                item.addEventListener('click', async function (event) {
+                    event.preventDefault(); // ✅ предотвращаем сабмит формы
+
                     const tone        = this.dataset.tone;
                     const description = textarea.value.trim();
                     const title       = titleInput ? titleInput.value.trim() : '';
