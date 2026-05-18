@@ -5,9 +5,28 @@ services:
         autowire: true
         autoconfigure: true
 
+        bind:
+            string $apiKey: '%env(GIGACHAT_API_KEY)%'
+
     App\:
         resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
 
-    App\Service\AiService:
+    App\Contract\PromptBuilderInterface:
+        alias: App\Builder\TaskAdvicePromptBuilder
+
+    App\Prompt\TaskPromptContextFactory:
         arguments:
-            $apiKey: '%env(GIGACHAT_API_KEY)%'
+            $maxDepth: 3
+            $maxRelationsPerNode: 3
+
+    _instanceof:
+        App\Contract\FieldRendererInterface:
+            tags: ['app.field_renderer']
+
+    App\Prompt\TaskRelationTreeRenderer:
+        arguments:
+            $fieldRenderers: !tagged_iterator app.field_renderer
