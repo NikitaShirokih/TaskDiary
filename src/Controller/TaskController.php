@@ -7,12 +7,18 @@ namespace App\Controller;
 use App\Dto\TaskData;
 use App\Entity\Task;
 use App\Entity\User;
+use App\Enum\TaskRights;
+use App\Enum\TaskStatus;
+use App\Enum\ToneAi;
 use App\Exception\TaskNotFoundException;
 use App\Repository\CategoryRepository;
 use App\Repository\TaskRepository;
 use App\Service\AiService;
 use App\Service\TaskExportService;
 use App\Service\TaskService;
+use InvalidArgumentException;
+use LogicException;
+use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,7 +26,9 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Throwable;
 
+#[IsGranted('ROLE_USER')]
 #[Route('/task', name: 'task_')]
 final class TaskController extends AbstractController
 {
@@ -35,8 +43,7 @@ final class TaskController extends AbstractController
     #[Route('/', name: 'list', methods: ['GET'])]
     public function list(Request $request): Response
     {
-        $user = $this->getUser();
-        assert($user instanceof User);
+        $user = $this->getAuthenticatedUser();
 
         $tasks = $this->taskRepository->findTasksByView(
             categoryId: $this->extractCategoryId($request),
@@ -54,8 +61,7 @@ final class TaskController extends AbstractController
     #[Route('/ajax/list', name: 'ajax_list', methods: ['GET'])]
     public function ajaxList(Request $request): Response
     {
-        $user = $this->getUser();
-        assert($user instanceof User);
+        $user = $this->getAuthenticatedUser();
 
         $tasks = $this->taskRepository->findTasksByView(
             categoryId: $this->extractCategoryId($request),
@@ -69,26 +75,9 @@ final class TaskController extends AbstractController
         ]);
     }
 
-    #[Route('/create', name: 'create', methods: ['GET', 'POST'])]
-    public function create(Request $request): Response
+    #[Route('/new', name: 'new', methods: ['GET'])]
+    public function new(): Response
     {
-        if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('task_create', $request->request->get('_token'))) {
-                throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
-            }
-
-            return $this->handleTaskForm(
-                request: $request,
-                template: 'task/create.html.twig',
-                onSuccess: function (TaskData $data): Response {
-                    $this->taskService->addTask($data);
-                    $this->addFlash('success', 'Задача успешно создана.');
-
-                    return $this->redirectToRoute('task_list');
-                },
-            );
-        }
-
         return $this->render('task/create.html.twig', [
             'categories' => $this->categoryRepository->findAll(),
             'taskData' => null,
@@ -96,50 +85,32 @@ final class TaskController extends AbstractController
         ]);
     }
 
-    #[Route('/analytics', name: 'analytics', methods: ['GET'])]
-    #[IsGranted('ROLE_USER')]
-    public function analytics(TaskRepository $taskRepository): Response
+    #[Route('', name: 'create', methods: ['POST'])]
+    public function create(Request $request): Response
     {
-        $user = $this->getUser();
-        assert($user instanceof User);
+        if (!$this->isCsrfTokenValid('task_create', (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
+        }
 
-        $productivityByDays = $taskRepository->getProductivityByDays($user);
-        $getAvgCompletionDays = $taskRepository->getAvgCompletionByDays($user);
-        $getBurndownDays = $taskRepository->getBurndownData($user);
+        return $this->handleTaskForm(
+            request: $request,
+            template: 'task/create.html.twig',
+            onSuccess: function (TaskData $data): Response {
+                $this->taskService->addTask($data);
+                $this->addFlash('success', 'Задача успешно создана.');
 
-        return $this->render('task/analytics.html.twig', [
-            'tasks' => $taskRepository->findTasksByView(user: $user),
-            'categories' => $this->categoryRepository->findAll(),
-            'productivityByDays' => $productivityByDays,
-            'avgCompletionDays' => $getAvgCompletionDays,
-            'burndownDays' => $getBurndownDays,
-        ]);
+                return $this->redirectToRoute('task_list');
+            },
+            extra: ['parent' => null],
+        );
     }
 
-    #[Route('/{id}/subtask/create', name: 'subtask_create', methods: ['GET', 'POST'])]
-    public function createSubtask(Request $request, int $id): Response
+    #[Route('/{id<\d+>}/subtask/new', name: 'subtask_new', methods: ['GET'])]
+    public function newSubtask(int $id): Response
     {
         $parent = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted('TASK_OWNER', $parent);
-
-        if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('subtask_create', $request->request->get('_token'))) {
-                throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
-            }
-
-            return $this->handleTaskForm(
-                request: $request,
-                template: 'task/create.html.twig',
-                onSuccess: function (TaskData $data) use ($id): Response {
-                    $this->taskService->addSubtask($id, $data);
-                    $this->addFlash('success', 'Подзадача успешно создана.');
-
-                    return $this->redirectToRoute('task_show', ['id' => $id]);
-                },
-                extra: ['parent' => $parent],
-            );
-        }
+        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $parent);
 
         return $this->render('task/create.html.twig', [
             'categories' => $this->categoryRepository->findAll(),
@@ -148,79 +119,129 @@ final class TaskController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'show', methods: ['GET'])]
-    public function show(Request $request): Response
+    #[Route('/{id<\d+>}/subtask', name: 'subtask_create', methods: ['POST'])]
+    public function createSubtask(Request $request, int $id): Response
     {
-        $id = (int) $request->attributes->get('id');
+        $parent = $this->taskService->getTaskById($id);
+
+        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $parent);
+
+        if (!$this->isCsrfTokenValid('subtask_create', (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
+        }
+
+        return $this->handleTaskForm(
+            request: $request,
+            template: 'task/create.html.twig',
+            onSuccess: function (TaskData $data) use ($id): Response {
+                $this->taskService->addSubtask($id, $data);
+                $this->addFlash('success', 'Подзадача успешно создана.');
+
+                return $this->redirectToRoute('task_show', ['id' => $id]);
+            },
+            extra: ['parent' => $parent],
+        );
+    }
+
+    #[Route('/{id<\d+>}', name: 'show', methods: ['GET'])]
+    public function show(int $id): Response
+    {
         $task = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted('TASK_OWNER', $task);
+        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
 
         return $this->render('task/show.html.twig', [
             'task' => $task,
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'edit', methods: ['GET', 'POST'])]
+    #[Route('/{id<\d+>}/edit', name: 'edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, int $id): Response
     {
         $task = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted('TASK_OWNER', $task);
+        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
 
-        if ($request->isMethod('POST')) {
-            if (!$this->isCsrfTokenValid('task_edit', $request->request->get('_token'))) {
-                throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
-            }
-
-            return $this->handleTaskForm(
-                request: $request,
-                template: 'task/edit.html.twig',
-                onSuccess: function (TaskData $data) use ($id): Response {
-                    $this->taskService->updateTask($id, $data);
-                    $this->addFlash('success', 'Задача успешно обновлена.');
-
-                    return $this->redirectToRoute('task_list');
-                },
-                extra: ['task' => $task],
-            );
+        if (!$request->isMethod('POST')) {
+            return $this->render('task/edit.html.twig', [
+                'task' => $task,
+                'categories' => $this->categoryRepository->findAll(),
+                'taskData' => null,
+            ]);
         }
 
-        return $this->render('task/edit.html.twig', [
-            'task' => $task,
-            'categories' => $this->categoryRepository->findAll(),
-            'taskData' => null,
-        ]);
+        if (!$this->isCsrfTokenValid('task_edit', (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
+        }
+
+        return $this->handleTaskForm(
+            request: $request,
+            template: 'task/edit.html.twig',
+            onSuccess: function (TaskData $data) use ($id): Response {
+                $this->taskService->updateTask($id, $data);
+                $this->addFlash('success', 'Задача успешно обновлена.');
+
+                return $this->redirectToRoute('task_list');
+            },
+            extra: ['task' => $task],
+        );
     }
 
-    #[Route('/{id}/status', name: 'update_status', methods: ['POST'])]
+    #[Route('/{id<\d+>}/status', name: 'update_status', methods: ['POST'])]
     public function updateStatus(Request $request, int $id): Response
     {
         $task = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted('TASK_OWNER', $task);
+        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
+
+        if (!$this->isCsrfTokenValid('task_status_'.$id, (string) $request->request->get('_token'))) {
+            throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
+        }
+
+        $statusValue = trim((string) $request->request->get('status', ''));
+
+        if ('' === $statusValue) {
+            $this->addFlash('error', 'Не передан новый статус задачи.');
+
+            return $this->redirectToRoute('task_list');
+        }
+
+        $status = TaskStatus::tryFrom($statusValue);
+
+        if (!$status instanceof TaskStatus) {
+            $this->addFlash('error', 'Некорректный статус задачи.');
+
+            return $this->redirectToRoute('task_list');
+        }
 
         try {
+            $taskId = $task->getId();
+
+            if (null === $taskId) {
+                throw new LogicException('Задача должна быть сохранена перед изменением статуса.');
+            }
+
             $this->taskService->updateStatus(
-                id: $task->getId(),
-                status: (string) $request->request->get('status'),
+                id: $taskId,
+                status: $status->value,
             );
+
             $this->addFlash('success', 'Статус задачи обновлён.');
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException|LogicException|TaskNotFoundException $e) {
             $this->addFlash('error', $e->getMessage());
         }
 
         return $this->redirectToRoute('task_list');
     }
 
-    #[Route('/{id}/delete', name: 'delete', methods: ['POST'])]
+    #[Route('/{id<\d+>}/delete', name: 'delete', methods: ['POST'])]
     public function delete(Request $request, int $id): Response
     {
         $task = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted('TASK_OWNER', $task);
+        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
 
-        if (!$this->isCsrfTokenValid('task-delete-'.$id, $request->request->get('_token'))) {
+        if (!$this->isCsrfTokenValid('task-delete-'.$id, (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
         }
 
@@ -234,20 +255,86 @@ final class TaskController extends AbstractController
         return $this->redirectToRoute('task_list');
     }
 
+    #[Route('/{id<\d+>}/ai-analyze', name: 'ai_analyze', methods: ['POST'])]
+    public function aiAnalyze(Task $task, AiService $aiService): JsonResponse
+    {
+        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
+
+        try {
+            $result = $aiService->analyzeTask($task);
+
+            return new JsonResponse(['result' => $result]);
+        } catch (Throwable $e) {
+            return new JsonResponse(
+                ['error' => 'Ошибка: '.$e->getMessage()],
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    #[Route('/ai-improve-description', name: 'ai_improve_description', methods: ['POST'])]
+    public function aiImproveDescription(Request $request, AiService $aiService): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (!is_array($data)) {
+            return new JsonResponse(['error' => 'Некорректный JSON.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $title = trim((string) ($data['title'] ?? ''));
+        $description = trim((string) ($data['description'] ?? ''));
+        $tone = ToneAi::fromMixed($data['tone'] ?? null);
+
+        if ('' === $description) {
+            return new JsonResponse(['error' => 'Описание не может быть пустым.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $result = $aiService->improveDescription($title, $description, $tone);
+
+            return new JsonResponse(['result' => $result]);
+        } catch (Throwable $e) {
+            return new JsonResponse(
+                ['error' => 'Ошибка GigaChat: '.$e->getMessage()],
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
+    #[Route('/{id<\d+>}/export', name: 'export_json', methods: ['GET'])]
+    public function exportJson(int $id, TaskExportService $exportService): JsonResponse
+    {
+        $task = $this->taskService->getTaskById($id);
+
+        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
+
+        $tasks = $this->taskService->getTaskWithDescendantsForExport($id);
+
+        return new JsonResponse(
+            $exportService->exportTask($task, $tasks),
+            Response::HTTP_OK,
+            ['Content-Disposition' => 'attachment; filename="task_'.$id.'.json"']
+        );
+    }
+
     /**
      * @param array<string, mixed> $extra
      */
-    private function handleTaskForm(Request $request, string $template, callable $onSuccess, array $extra = []): Response
-    {
+    private function handleTaskForm(
+        Request $request,
+        string $template,
+        callable $onSuccess,
+        array $extra = [],
+    ): Response {
         try {
             $taskData = TaskData::fromRequest($request);
-        } catch (\InvalidArgumentException $e) {
+        } catch (InvalidArgumentException $e) {
             $this->addFlash('error', $e->getMessage());
 
             return $this->render($template, $extra + [
-                'categories' => $this->categoryRepository->findAll(),
-                'taskData' => null,
-            ]);
+                    'categories' => $this->categoryRepository->findAll(),
+                    'taskData' => null,
+                ]);
         }
 
         $errors = $this->validator->validate($taskData);
@@ -258,20 +345,20 @@ final class TaskController extends AbstractController
             }
 
             return $this->render($template, $extra + [
-                'categories' => $this->categoryRepository->findAll(),
-                'taskData' => $taskData,
-            ]);
+                    'categories' => $this->categoryRepository->findAll(),
+                    'taskData' => $taskData,
+                ]);
         }
 
         try {
             return $onSuccess($taskData);
-        } catch (\LogicException|\RuntimeException $e) {
+        } catch (InvalidArgumentException|LogicException|RuntimeException $e) {
             $this->addFlash('error', $e->getMessage());
 
             return $this->render($template, $extra + [
-                'categories' => $this->categoryRepository->findAll(),
-                'taskData' => $taskData,
-            ]);
+                    'categories' => $this->categoryRepository->findAll(),
+                    'taskData' => $taskData,
+                ]);
         }
     }
 
@@ -282,60 +369,14 @@ final class TaskController extends AbstractController
         return null !== $value && '' !== $value ? (int) $value : null;
     }
 
-    #[Route('/{id}/ai-analyze', name: 'ai_analyze', methods: ['POST'])]
-    public function aiAnalyze(Task $task, AiService $aiService): JsonResponse
+    private function getAuthenticatedUser(): User
     {
-        $this->denyAccessUnlessGranted('TASK_OWNER', $task);
+        $user = $this->getUser();
 
-        try {
-            $result = $aiService->analyzeTask(
-                $task->getTitle(),
-                $task->getDescription()
-            );
-
-            return new JsonResponse(['result' => $result]);
-        } catch (\Exception $e) {
-            return new JsonResponse(
-                ['error' => 'Ошибка: '.$e->getMessage()],
-                500
-            );
-        }
-    }
-
-    #[Route('/ai-improve-description', name: 'ai_improve_description', methods: ['POST'])]
-    public function aiImproveDescription(Request $request, AiService $aiService): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-        $title = trim((string) ($data['title'] ?? ''));
-        $description = trim((string) ($data['description'] ?? ''));
-        $tone = in_array($data['tone'] ?? '', ['friendly', 'angry', 'neutral'])
-            ? $data['tone']
-            : 'neutral';
-
-        if ('' === $description) {
-            return new JsonResponse(['error' => 'Описание не может быть пустым'], 400);
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('Пользователь не авторизован.');
         }
 
-        try {
-            $result = $aiService->improveDescription($title, $description, $tone);
-
-            return new JsonResponse(['result' => $result]);
-        } catch (\Exception $e) {
-            return new JsonResponse(['error' => 'Ошибка GigaChat: '.$e->getMessage()], 500);
-        }
-    }
-
-    #[Route('/{id}/export', name: 'export_json', methods: ['GET'])]
-    public function exportJson(int $id, TaskExportService $exportService): JsonResponse
-    {
-        $task = $this->taskService->getTaskById($id);
-
-        $this->denyAccessUnlessGranted('TASK_OWNER', $task);
-
-        return new JsonResponse(
-            $exportService->serializeTask($task),
-            200,
-            ['Content-Disposition' => 'attachment; filename="task_'.$id.'.json"']
-        );
+        return $user;
     }
 }

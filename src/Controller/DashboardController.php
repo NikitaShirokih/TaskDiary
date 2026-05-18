@@ -5,27 +5,37 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Entity\User;
-use App\Repository\CategoryRepository;
 use App\Repository\TaskRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-class DashboardController extends AbstractController
+#[IsGranted('ROLE_USER')]
+final class DashboardController extends AbstractController
 {
-    #[Route('/', name: 'app_dashboard')]
-    public function index(TaskRepository $taskRepository, CategoryRepository $categoryRepository): Response
-    {
-        $user = $this->getUser();
-        assert($user instanceof User);
+    public function __construct(
+        private readonly TaskRepository $taskRepository,
+    ) {
+    }
 
-        $latestTasks = $taskRepository->findBy(['user' => $user], ['id' => 'DESC'], 5);
-        $chartData = $taskRepository->getCategoryChartData($user);
+    #[Route('/dashboard', name: 'app_dashboard', methods: ['GET'])]
+    public function index(): Response
+    {
+        $user = $this->getAuthenticatedUser();
+
+        $latestTasks = $this->taskRepository->findBy(
+            ['user' => $user],
+            ['id' => 'DESC'],
+            5
+        );
+
+        $chartData = $this->taskRepository->getCategoryChartData($user);
 
         $stats = [
-            'activeTasks' => $taskRepository->countActive($user),
-            'dueTodayTasks' => $taskRepository->countDueToday($user),
-            'dueThisWeekTasks' => $taskRepository->countDueThisWeek($user),
+            'activeTasks' => $this->taskRepository->countActive($user),
+            'dueTodayTasks' => $this->taskRepository->countDueToday($user),
+            'dueThisWeekTasks' => $this->taskRepository->countDueThisWeek($user),
         ];
 
         $categoryChart = [
@@ -34,11 +44,12 @@ class DashboardController extends AbstractController
             'colors' => array_column($chartData, 'color'),
         ];
 
-        $calendarEvents = $taskRepository->getCalendarEvents($user);
+        $calendarEvents = $this->taskRepository->getCalendarEvents($user);
 
         foreach ($calendarEvents as &$event) {
             $event['url'] = $this->generateUrl('task_list');
         }
+
         unset($event);
 
         return $this->render('dashboard/index.html.twig', [
@@ -47,5 +58,16 @@ class DashboardController extends AbstractController
             'categoryChart' => $categoryChart,
             'calendarEvents' => $calendarEvents,
         ]);
+    }
+
+    private function getAuthenticatedUser(): User
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('Пользователь не авторизован.');
+        }
+
+        return $user;
     }
 }
