@@ -31,13 +31,11 @@ final class RegistrationService
             throw new ValidationException($errors);
         }
 
-        $email = (string) $user->getEmail();
+        $email = (string)$user->getEmail();
 
-        $existing = $this->userRepository->findOneBy([
-            'email' => $email,
-        ]);
+        $current = $this->userRepository->findOneBy(['email' => $email,]);
 
-        if (null !== $existing) {
+        if ($current !== null) {
             throw UserAlreadyExistsException::byEmail($email);
         }
 
