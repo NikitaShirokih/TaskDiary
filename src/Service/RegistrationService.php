@@ -45,9 +45,8 @@ final class RegistrationService
         $user->setPassword($hashedPassword);
 
         try {
-            $this->entityManager->wrapInTransaction(function () use ($user): void {
-                $this->entityManager->persist($user);
-            });
+            $this->entityManager->persist($user);
+            $this->entityManager->flush();
         } catch (UniqueConstraintViolationException) {
             throw UserAlreadyExistsException::byEmail($email);
         }

@@ -66,122 +66,6 @@ class TaskRepository extends ServiceEntityRepository
         return $qb->getQuery()->getResult();
     }
 
-    /**
-     * @return array<int, Task>
-     */
-    public function findByStatus(string $status): array
-    {
-        $taskStatus = TaskStatus::tryFrom($status)
-            ?? throw new \InvalidArgumentException(sprintf('Некорректный статус: "%s"', $status));
-
-        return $this->createQueryBuilder('t')
-            ->andWhere('t.status = :status')
-            ->setParameter('status', $taskStatus->value)
-            ->orderBy('t.createdAt', 'DESC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return array<int, Task>
-     */
-    public function findByPriority(string $priority): array
-    {
-        $taskPriority = TaskPriority::tryFrom($priority)
-            ?? throw new \InvalidArgumentException(sprintf('Некорректный приоритет: "%s"', $priority));
-
-        return $this->createQueryBuilder('t')
-            ->andWhere('t.priority = :priority')
-            ->setParameter('priority', $taskPriority->value)
-            ->orderBy('t.startTime', 'ASC')
-            ->getQuery()
-            ->getResult();
-    }
-
-    /**
-     * @return array<int, Task>
-     */
-    public function findTodayTasks(?User $user = null): array
-    {
-        $qb = $this->createQueryBuilder('t')
-            ->andWhere('t.startTime >= :today')
-            ->andWhere('t.startTime < :tomorrow')
-            ->setParameter('today', new \DateTimeImmutable('today'))
-            ->setParameter('tomorrow', new \DateTimeImmutable('tomorrow'))
-            ->orderBy('t.startTime', 'ASC');
-
-        if (null !== $user) {
-            $qb->andWhere('t.user = :user')
-                ->setParameter('user', $user);
-        }
-
-        return $qb->getQuery()->getResult();
-    }
-
-    /**
-     * @return array<int, Task>
-     */
-    public function findOverdueTasks(?User $user = null): array
-    {
-        $qb = $this->createQueryBuilder('t')
-            ->andWhere('t.endTime < :now')
-            ->andWhere('t.status != :completed')
-            ->setParameter('now', new \DateTimeImmutable())
-            ->setParameter('completed', TaskStatus::Completed->value)
-            ->orderBy('t.endTime', 'ASC');
-
-        if (null !== $user) {
-            $qb->andWhere('t.user = :user')
-                ->setParameter('user', $user);
-        }
-
-        return $qb->getQuery()->getResult();
-    }
-
-    public function countAll(?User $user = null): int
-    {
-        $qb = $this->createQueryBuilder('t')
-            ->select('COUNT(t.id)');
-
-        if (null !== $user) {
-            $qb->andWhere('t.user = :user')
-                ->setParameter('user', $user);
-        }
-
-        return (int) $qb->getQuery()->getSingleScalarResult();
-    }
-
-    public function countByStatus(TaskStatus $status, ?User $user = null): int
-    {
-        $qb = $this->createQueryBuilder('t')
-            ->select('COUNT(t.id)')
-            ->andWhere('t.status = :status')
-            ->setParameter('status', $status->value);
-
-        if (null !== $user) {
-            $qb->andWhere('t.user = :user')
-                ->setParameter('user', $user);
-        }
-
-        return (int) $qb->getQuery()->getSingleScalarResult();
-    }
-
-    public function countOverdue(?User $user = null): int
-    {
-        $qb = $this->createQueryBuilder('t')
-            ->select('COUNT(t.id)')
-            ->andWhere('t.endTime < :now')
-            ->andWhere('t.status != :completed')
-            ->setParameter('now', new \DateTimeImmutable())
-            ->setParameter('completed', TaskStatus::Completed->value);
-
-        if (null !== $user) {
-            $qb->andWhere('t.user = :user')
-                ->setParameter('user', $user);
-        }
-
-        return (int) $qb->getQuery()->getSingleScalarResult();
-    }
 
     public function countActive(?User $user = null): int
     {
@@ -428,4 +312,5 @@ class TaskRepository extends ServiceEntityRepository
             'completed' => $completedQb->getQuery()->getArrayResult(),
         ];
     }
+
 }
