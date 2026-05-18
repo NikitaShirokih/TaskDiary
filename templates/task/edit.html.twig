@@ -9,6 +9,7 @@
                 <h1 class="mb-1">✏️ Редактирование задачи</h1>
                 <p class="text-muted mb-0">Обновите информацию о задаче</p>
             </div>
+
             <div class="d-flex gap-2">
                 <a href="{{ path('app_dashboard') }}" class="btn btn-outline-secondary">На главную</a>
                 <a href="{{ path('task_list') }}" class="btn btn-outline-primary">К списку задач</a>
@@ -23,73 +24,102 @@
             <div class="alert alert-danger">{{ message }}</div>
         {% endfor %}
 
+        {% set titleValue = taskData ? taskData.title : task.title %}
+        {% set descriptionValue = taskData ? taskData.description : task.description %}
+        {% set priorityValue = taskData ? taskData.priority : task.priority.value %}
+        {% set statusValue = taskData ? taskData.status : task.status.value %}
+        {% set startTimeValue = taskData and taskData.startTime ? taskData.startTime : task.startTime %}
+        {% set endTimeValue = taskData and taskData.endTime ? taskData.endTime : task.endTime %}
+        {% set categoryValue = taskData ? taskData.categoryId : (task.category ? task.category.id : null) %}
+
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
                 <h4 class="mb-4">Данные задачи</h4>
 
-                <form method="post">
+                <form method="post" action="{{ path('task_edit', {id: task.id}) }}">
                     <input type="hidden" name="_token" value="{{ csrf_token('task_edit') }}">
+
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Название задачи</label>
-                            <input type="text" name="title" class="form-control" value="{{ task.title }}" required>
+                            <label for="title" class="form-label fw-semibold">Название задачи</label>
+                            <input
+                                id="title"
+                                type="text"
+                                name="title"
+                                class="form-control"
+                                value="{{ titleValue }}"
+                                required
+                            >
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Приоритет</label>
-                            {% set priorityValue = task.priority.value %}
-                            <select name="priority" class="form-select">
-                                <option value="low" {% if priorityValue == 'low' %}selected{% endif %}>Низкий</option>
-                                <option value="medium" {% if priorityValue == 'medium' %}selected{% endif %}>Средний</option>
-                                <option value="high" {% if priorityValue == 'high' %}selected{% endif %}>Высокий</option>
+                            <label for="priority" class="form-label fw-semibold">Приоритет</label>
+                            <select id="priority" name="priority" class="form-select">
+                                <option value="low" {{ priorityValue == 'low' ? 'selected' }}>Низкий</option>
+                                <option value="medium" {{ priorityValue == 'medium' ? 'selected' }}>Средний</option>
+                                <option value="high" {{ priorityValue == 'high' ? 'selected' }}>Высокий</option>
                             </select>
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Описание</label>
-                            <textarea name="description" rows="4" class="form-control">{{ task.description }}</textarea>
+                            <label for="description" class="form-label fw-semibold">Описание</label>
+                            <textarea
+                                id="description"
+                                name="description"
+                                rows="4"
+                                class="form-control"
+                            >{{ descriptionValue }}</textarea>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Дата начала</label>
-                            <input type="datetime-local" name="start_time" class="form-control"
-                                   value="{{ task.startTime ? task.startTime|date('Y-m-d\\TH:i') : '' }}">
+                            <label for="start_time" class="form-label fw-semibold">Дата начала</label>
+                            <input
+                                id="start_time"
+                                type="datetime-local"
+                                name="start_time"
+                                class="form-control"
+                                value="{{ startTimeValue ? startTimeValue|date('Y-m-d\\TH:i') : '' }}"
+                            >
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Дата окончания</label>
-                            <input type="datetime-local" name="end_time" class="form-control"
-                                   value="{{ task.endTime ? task.endTime|date('Y-m-d\\TH:i') : '' }}">
+                            <label for="end_time" class="form-label fw-semibold">Дата окончания</label>
+                            <input
+                                id="end_time"
+                                type="datetime-local"
+                                name="end_time"
+                                class="form-control"
+                                value="{{ endTimeValue ? endTimeValue|date('Y-m-d\\TH:i') : '' }}"
+                            >
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Статус</label>
-                            {% set statusValue = task.status.value %}
-                            <select name="status" class="form-select">
-                                <option value="waiting" {% if statusValue == 'waiting' %}selected{% endif %}>Ожидание</option>
-                                <option value="in_progress" {% if statusValue == 'in_progress' %}selected{% endif %}>В работе</option>
-                                <option value="completed" {% if statusValue == 'completed' %}selected{% endif %}>Завершено</option>
+                            <label for="status" class="form-label fw-semibold">Статус</label>
+                            <select id="status" name="status" class="form-select">
+                                <option value="waiting" {{ statusValue == 'waiting' ? 'selected' }}>Ожидание</option>
+                                <option value="in_progress" {{ statusValue == 'in_progress' ? 'selected' }}>В работе</option>
+                                <option value="completed" {{ statusValue == 'completed' ? 'selected' }}>Завершено</option>
                             </select>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Категория</label>
-                            <select name="category" class="form-select" required>
-                                <option value="" disabled {% if not task.category %}selected{% endif %}>— Выберите категорию —</option>
+                            <label for="category" class="form-label fw-semibold">Категория</label>
+                            <select id="category" name="category" class="form-select" required>
+                                <option value="" disabled {{ categoryValue is empty ? 'selected' }}>
+                                    — Выберите категорию —
+                                </option>
                                 {% for category in categories %}
-                                    <option value="{{ category.id }}"
-                                            {% if task.category and task.category.id == category.id %}selected{% endif %}>
+                                    <option value="{{ category.id }}" {{ categoryValue == category.id ? 'selected' }}>
                                         {{ category.name }}
                                     </option>
                                 {% endfor %}
                             </select>
-
                         </div>
                     </div>
 
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary">Сохранить изменения</button>
-                        <a href="{{ path('task_list') }}" class="btn btn-light border">Отмена</a>
+                        <a href="{{ path('task_show', {id: task.id}) }}" class="btn btn-light border">Отмена</a>
                     </div>
                 </form>
             </div>

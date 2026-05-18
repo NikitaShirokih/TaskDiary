@@ -5,27 +5,24 @@
 {% block body %}
     <div class="container-fluid py-3 px-4">
 
-        {# Шапка #}
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <h1 class="mb-0 fs-4 fw-bold">📘 Task Diary</h1>
                 <p class="text-muted small mb-0">Обзор задач и календарь</p>
             </div>
-            <a href="{{ path('task_create') }}" class="btn btn-primary btn-sm">+ Новая задача</a>
+
+            <a href="{{ path('task_new') }}" class="btn btn-primary btn-sm">+ Новая задача</a>
         </div>
 
         <div class="row g-3">
 
-            {# ЛЕВАЯ КОЛОНКА #}
             <div class="col-lg-3 d-flex flex-column gap-3">
 
-                {# Активность #}
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-3">
                         <h6 class="text-muted mb-3">Активность</h6>
 
-                        <div class="d-flex align-items-center justify-content-between mb-3 p-2 rounded"
-                             style="background-color: #e8f4fd;">
+                        <div class="d-flex align-items-center justify-content-between mb-3 p-2 rounded" style="background-color: #e8f4fd;">
                             <div>
                                 <div class="small text-muted">Активных задач</div>
                                 <div class="fw-bold fs-4 text-primary">{{ stats.activeTasks }}</div>
@@ -33,8 +30,7 @@
                             <span style="font-size: 1.8rem;">📋</span>
                         </div>
 
-                        <div class="d-flex align-items-center justify-content-between mb-2 p-2 rounded"
-                             style="background-color: #fff8e1;">
+                        <div class="d-flex align-items-center justify-content-between mb-2 p-2 rounded" style="background-color: #fff8e1;">
                             <div>
                                 <div class="small text-muted">Срок истекает сегодня</div>
                                 <div class="fw-bold fs-5 text-warning">{{ stats.dueTodayTasks }}</div>
@@ -42,8 +38,7 @@
                             <span style="font-size: 1.5rem;">⚠️</span>
                         </div>
 
-                        <div class="d-flex align-items-center justify-content-between p-2 rounded"
-                             style="background-color: #fce8e8;">
+                        <div class="d-flex align-items-center justify-content-between p-2 rounded" style="background-color: #fce8e8;">
                             <div>
                                 <div class="small text-muted">Срок истекает за неделю</div>
                                 <div class="fw-bold fs-5 text-danger">{{ stats.dueThisWeekTasks }}</div>
@@ -53,8 +48,6 @@
                     </div>
                 </div>
 
-
-                {# Категории #}
                 <div class="card shadow-sm border-0">
                     <div class="card-body p-3">
                         <h6 class="text-muted mb-3">По категориям</h6>
@@ -62,18 +55,24 @@
                     </div>
                 </div>
 
-                {# Последние задачи #}
                 <div class="card shadow-sm border-0 flex-grow-1">
                     <div class="card-body p-3">
                         <div class="d-flex justify-content-between align-items-center mb-3">
                             <h6 class="text-muted mb-0">Последние задачи</h6>
                             <a href="{{ path('task_list') }}" class="small text-primary text-decoration-none">Все →</a>
                         </div>
+
                         {% if latestTasks is not empty %}
                             {% for task in latestTasks %}
                                 <div class="mb-2 pb-2 border-bottom">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <span class="small fw-semibold">{{ task.title }}</span>
+                                    <div class="d-flex justify-content-between align-items-start gap-2">
+                                        <a
+                                            href="{{ path('task_show', {id: task.id}) }}"
+                                            class="small fw-semibold text-decoration-none text-dark text-break"
+                                        >
+                                            {{ task.title }}
+                                        </a>
+
                                         {% if task.status.value == 'completed' %}
                                             <span class="badge bg-success ms-1" style="font-size: 0.65rem;">✓</span>
                                         {% elseif task.status.value == 'in_progress' %}
@@ -82,11 +81,14 @@
                                             <span class="badge bg-secondary ms-1" style="font-size: 0.65rem;">○</span>
                                         {% endif %}
                                     </div>
+
                                     {% if task.category %}
-                                        <span class="badge rounded-pill mt-1"
-                                              style="background-color: {{ task.category.color ?? '#3498db' }}; font-size: 0.65rem;">
-                                        {{ task.category.name }}
-                                    </span>
+                                        <span
+                                            class="badge rounded-pill mt-1"
+                                            style="background-color: {{ task.category.color ?? '#3498db' }}; font-size: 0.65rem;"
+                                        >
+                                            {{ task.category.name }}
+                                        </span>
                                     {% endif %}
                                 </div>
                             {% endfor %}
@@ -98,7 +100,6 @@
 
             </div>
 
-            {# ПРАВАЯ КОЛОНКА — Календарь #}
             <div class="col-lg-9">
                 <div class="card shadow-sm border-0 h-100">
                     <div class="card-body p-3">
@@ -157,47 +158,64 @@
         const categoryColors = {{ categoryChart.colors|json_encode|raw }};
         const calendarEvents = {{ calendarEvents|default([])|json_encode|raw }};
 
-        new Chart(document.getElementById('categoryChart'), {
-            type: 'doughnut',
-            data: {
-                labels: categoryLabels,
-                datasets: [{
-                    data: categoryData,
-                    backgroundColor: categoryColors,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: { font: { size: 11 }, boxWidth: 12 }
+        const categoryChartElement = document.getElementById('categoryChart');
+
+        if (categoryChartElement) {
+            new Chart(categoryChartElement, {
+                type: 'doughnut',
+                data: {
+                    labels: categoryLabels,
+                    datasets: [{
+                        data: categoryData,
+                        backgroundColor: categoryColors,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                font: { size: 11 },
+                                boxWidth: 12
+                            }
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', function () {
-            const calendar = new FullCalendar.Calendar(document.getElementById('taskCalendar'), {
+            const calendarElement = document.getElementById('taskCalendar');
+
+            if (!calendarElement) {
+                return;
+            }
+
+            const showTaskUrlTemplate = '{{ path('task_show', {id: 0}) }}';
+
+            const calendar = new FullCalendar.Calendar(calendarElement, {
                 initialView: 'dayGridMonth',
                 locale: 'ru',
                 height: 'auto',
                 headerToolbar: {
                     left: 'prev,next today',
                     center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,listWeek'
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
                 buttonText: {
                     today: 'Сегодня',
                     month: 'Месяц',
-                    week:  'Неделя',
-                    list:  'Список'
+                    week: 'Неделя',
+                    day: 'День'
                 },
                 events: calendarEvents,
-                eventClick: function(info) {
-                    window.location.href = info.event.url ?? '#';
+                eventClick: function (info) {
+                    if (info.event.id) {
+                        window.location.href = showTaskUrlTemplate.replace('/0', '/' + info.event.id);
+                    }
                 }
             });
 
