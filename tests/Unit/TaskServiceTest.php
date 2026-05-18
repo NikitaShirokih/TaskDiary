@@ -21,29 +21,31 @@ use Symfony\Bundle\SecurityBundle\Security;
 final class TaskServiceTest extends TestCase
 {
     private function makeService(
-        EntityManagerInterface $entityManager = null,
-        Security $security = null,
-        CategoryRepository $categoryRepository = null,
-        TaskRepository $taskRepository = null,
-    ): TaskService {
+        ?EntityManagerInterface $entityManager = null,
+        ?Security               $security = null,
+        ?CategoryRepository     $categoryRepository = null,
+        ?TaskRepository         $taskRepository = null,
+    ): TaskService
+    {
         return new TaskService(
-            $entityManager      ?? $this->createStub(EntityManagerInterface::class),
+            $entityManager ?? $this->createStub(EntityManagerInterface::class),
             $categoryRepository ?? $this->createStub(CategoryRepository::class),
-            $taskRepository     ?? $this->createStub(TaskRepository::class),
-            $security           ?? $this->createStub(Security::class),
+            $taskRepository ?? $this->createStub(TaskRepository::class),
+            $security ?? $this->createStub(Security::class),
         );
     }
 
     private function makeData(
-        string $title = 'Тестовая задача',
-        string $priority = 'medium',
-        string $status = 'waiting',
-        ?string $description = null,
+        string              $title = 'Тестовая задача',
+        string              $priority = TaskPriority::Medium->value,
+        string              $status = TaskStatus::Waiting->value,
+        ?string             $description = null,
         ?\DateTimeImmutable $startTime = null,
         ?\DateTimeImmutable $endTime = null,
-        ?int $categoryId = null,
-        ?int $parentId = null,
-    ): TaskData {
+        ?int                $categoryId = null,
+        ?int                $parentId = null,
+    ): TaskData
+    {
         return new TaskData(
             title: $title,
             description: $description,
@@ -415,8 +417,11 @@ final class TaskServiceTest extends TestCase
         $user = $this->createStub(User::class);
         $task = Task::create(user: $user, title: 'Задача');
 
-        $taskRepo = $this->createStub(TaskRepository::class);
-        $taskRepo->method('find')->willReturn($task);
+        $taskRepo = $this->createMock(TaskRepository::class);
+        $taskRepo->expects($this->once())
+            ->method('find')->willReturn($task)
+            ->with(1)
+            ->willReturn($task);
 
         $service = $this->makeService(taskRepository: $taskRepo);
 
@@ -437,4 +442,26 @@ final class TaskServiceTest extends TestCase
 
         $service->getTaskById(42);
     }
+
+    public function testUpdateStatusThrowsWhenTaskNotFound(): void
+    {
+        $taskRepo = $this->createMock(TaskRepository::class);
+        $taskRepo->expects($this->once())
+            ->method('find')
+            ->with(999)
+            ->willReturn(null);
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->never())->method('flush');
+
+        $service = $this->makeService(
+            entityManager: $em,
+            taskRepository: $taskRepo,
+        );
+
+        $this->expectException(TaskNotFoundException::class);
+
+        $service->updateStatus(999, TaskStatus::Completed->value);
+    }
 }
+

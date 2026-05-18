@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Service;
 
 use App\Dto\TaskData;
+use App\Entity\Category;
 use App\Entity\Task;
 use App\Entity\User;
 use App\Enum\TaskPriority;
@@ -13,7 +14,10 @@ use App\Exception\TaskNotFoundException;
 use App\Repository\CategoryRepository;
 use App\Repository\TaskRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use InvalidArgumentException;
+use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 
 final class TaskService
 {
@@ -27,21 +31,22 @@ final class TaskService
 
     public function addTask(TaskData $data): void
     {
-        $user = $this->security->getUser();
-        assert($user instanceof User);
+        $user = $this->getAuthenticatedUser();
 
-        $category = $this->resolveCategory($data->categoryId);
-        $priority = TaskPriority::from((string) $data->priority);
+        $category = $this->resolveRequiredCategory($data->categoryId);
+        $priority = $this->resolvePriority($data->priority);
+        $status = $this->resolveStatus($data->status);
 
         $task = Task::create(
             user: $user,
-            title: trim((string) $data->title),
+            title: trim($data->title),
             priority: $priority,
             category: $category,
         );
 
-        $this->applyScheduleAndDescription($task, $data);
-        $this->applyStatus($task, $data->status);
+        $task->describe($data->description);
+        $task->schedule($data->startTime, $data->endTime);
+        $this->applyStatus($task, $status);
 
         $this->entityManager->persist($task);
         $this->entityManager->flush();
@@ -50,19 +55,29 @@ final class TaskService
     public function addSubtask(int $parentId, TaskData $data): void
     {
         $parent = $this->getTaskById($parentId);
-        $user = $this->security->getUser();
-        assert($user instanceof User);
+        $user = $this->getAuthenticatedUser();
 
-        $priority = TaskPriority::from((string) $data->priority);
+        $priority = $this->resolvePriority($data->priority);
+        $status = $this->resolveStatus($data->status);
 
         $subtask = Task::createSubtask(
             parent: $parent,
             user: $user,
-            title: trim((string) $data->title),
+            title: trim($data->title),
             priority: $priority,
         );
 
-        $this->applyScheduleAndDescription($subtask, $data);
+        $subtask->describe($data->description);
+
+        /*
+         * Подзадача НЕ получает свою категорию.
+         * Категория принадлежит основной задаче.
+         *
+         * Если в сущности есть nullable category, оставляем её null.
+         * Если подзадача раньше случайно получила категорию через старую логику,
+         * при редактировании она будет очищена в updateTask().
+         */
+        $this->applyStatus($subtask, $status);
 
         $this->entityManager->persist($subtask);
         $this->entityManager->flush();
@@ -71,15 +86,27 @@ final class TaskService
     public function updateTask(int $id, TaskData $data): void
     {
         $task = $this->getTaskById($id);
-        $category = $this->resolveCategory($data->categoryId);
 
-        $task->rename(trim((string) $data->title));
+        $priority = $this->resolvePriority($data->priority);
+        $status = $this->resolveStatus($data->status);
+
+        $task->rename(trim($data->title));
         $task->describe($data->description);
-        $task->changePriority(TaskPriority::from((string) $data->priority));
-        $task->assignCategory($category);
+        $task->changePriority($priority);
+        $this->applyStatus($task, $status);
 
-        $this->applyScheduleAndDescription($task, $data);
-        $this->applyStatus($task, $data->status);
+        if ($task->isSubtask()) {
+            /*
+             * Подзадача не должна иметь собственную категорию.
+             * Категория берётся концептуально от основной задачи.
+             */
+            $task->assignCategory(null);
+        } else {
+            $category = $this->resolveRequiredCategory($data->categoryId);
+
+            $task->assignCategory($category);
+            $task->schedule($data->startTime, $data->endTime);
+        }
 
         $this->entityManager->flush();
     }
@@ -87,14 +114,9 @@ final class TaskService
     public function updateStatus(int $id, ?string $status): void
     {
         $task = $this->getTaskById($id);
-        $taskStatus = TaskStatus::tryFrom((string) $status)
-            ?? throw new \InvalidArgumentException(sprintf('Некорректный статус: "%s".', $status));
+        $taskStatus = $this->resolveStatus((string) $status);
 
-        match ($taskStatus) {
-            TaskStatus::InProgress => $task->start(),
-            TaskStatus::Completed => $task->complete(),
-            TaskStatus::Waiting => $task->reopen(),
-        };
+        $this->applyStatus($task, $taskStatus);
 
         $this->entityManager->flush();
     }
@@ -113,31 +135,55 @@ final class TaskService
             ?? throw new TaskNotFoundException(sprintf('Задача #%d не найдена.', $id));
     }
 
-    private function resolveCategory(?int $categoryId): ?\App\Entity\Category
+    /**
+     * @return array<int, Task>
+     */
+    public function getTaskWithDescendantsForExport(int $id): array
+    {
+        return $this->taskRepository->findTaskWithDescendantsForExport($id);
+    }
+
+    private function getAuthenticatedUser(): User
+    {
+        $user = $this->security->getUser();
+
+        if (!$user instanceof User) {
+            throw new AccessDeniedException('User is not authenticated.');
+        }
+
+        return $user;
+    }
+
+    private function resolveRequiredCategory(?int $categoryId): Category
     {
         if (null === $categoryId) {
-            return null;
+            throw new RuntimeException('Для основной задачи необходимо выбрать категорию.');
         }
 
-        return $this->categoryRepository->find($categoryId)
-            ?? throw new \RuntimeException(sprintf('Категория #%d не найдена.', $categoryId));
-    }
+        $category = $this->categoryRepository->find($categoryId);
 
-    private function applyScheduleAndDescription(Task $task, TaskData $data): void
-    {
-        $task->describe($data->description);
-        $task->schedule($data->startTime, $data->endTime);
-    }
-
-    private function applyStatus(Task $task, mixed $status): void
-    {
-        $taskStatus = TaskStatus::tryFrom((string) $status);
-
-        if (null === $taskStatus) {
-            return;
+        if (!$category instanceof Category) {
+            throw new RuntimeException(sprintf('Категория #%d не найдена.', $categoryId));
         }
 
-        match ($taskStatus) {
+        return $category;
+    }
+
+    private function resolvePriority(string $priority): TaskPriority
+    {
+        return TaskPriority::tryFrom($priority)
+            ?? throw new InvalidArgumentException(sprintf('Некорректный приоритет: "%s".', $priority));
+    }
+
+    private function resolveStatus(string $status): TaskStatus
+    {
+        return TaskStatus::tryFrom($status)
+            ?? throw new InvalidArgumentException(sprintf('Некорректный статус: "%s".', $status));
+    }
+
+    private function applyStatus(Task $task, TaskStatus $status): void
+    {
+        match ($status) {
             TaskStatus::InProgress => $task->start(),
             TaskStatus::Completed => $task->complete(),
             TaskStatus::Waiting => $task->reopen(),

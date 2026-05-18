@@ -10,6 +10,7 @@
                         <th>Задача</th>
                         <th>Описание</th>
                         <th>Приоритет</th>
+                        <th>Статус</th>
                         <th>Дата начала</th>
                         <th>Дата окончания</th>
                         <th>Осталось</th>
@@ -17,20 +18,34 @@
                         <th class="pe-4">Удалить</th>
                     </tr>
                     </thead>
+
                     <tbody>
                     {% for task in tasks %}
-                        <tr class="task-row" style="vertical-align: middle;" onclick="window.location='{{ path('task_show', {id: task.id}) }}'">
+                        <tr
+                            class="task-row {% if task.status.value == 'completed' %}task-completed{% endif %}"
+                            style="vertical-align: middle;"
+                            onclick="window.location='{{ path('task_show', {id: task.id}) }}'"
+                        >
                             <td class="ps-4 text-center" style="vertical-align: middle;">
                                 {% if task.children is not empty %}
-                                    <button class="btn btn-sm btn-link p-0 text-muted subtask-toggle"
-                                            data-target="subtasks-{{ task.id }}"
-                                            onclick="event.stopPropagation(); toggleSubtasks(this)"
-                                            title="Показать подзадачи">
-                                        <svg class="toggle-icon" xmlns="http://www.w3.org/2000/svg"
-                                             width="16" height="16" fill="currentColor"
-                                             viewBox="0 0 16 16" style="transition: transform .2s;">
+                                    <button
+                                        class="btn btn-sm btn-link p-0 text-muted subtask-toggle"
+                                        data-target="subtasks-{{ task.id }}"
+                                        onclick="event.stopPropagation(); toggleSubtasks(this)"
+                                        title="Показать подзадачи"
+                                    >
+                                        <svg
+                                            class="toggle-icon"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="16"
+                                            height="16"
+                                            fill="currentColor"
+                                            viewBox="0 0 16 16"
+                                            style="transition: transform .2s;"
+                                        >
                                             <path d="M1.5 5.5a.5.5 0 0 1 .854-.354L8 10.793l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6A.5.5 0 0 1 1.5 5.5z"/>
                                         </svg>
+
                                         <span class="badge bg-secondary ms-1" style="font-size: 10px;">
                                             {{ task.children|length }}
                                         </span>
@@ -40,13 +55,21 @@
 
                             <td style="vertical-align: middle;">
                                 {% if task.category %}
-                                    <span class="badge rounded-pill text-bg-light border text-dark">{{ task.category.name }}</span>
+                                    <span class="badge rounded-pill text-bg-light border text-dark">
+                                        {{ task.category.name }}
+                                    </span>
                                 {% else %}
                                     <span class="text-muted">Без категории</span>
                                 {% endif %}
                             </td>
 
-                            <td class="fw-semibold" style="vertical-align: middle;">{{ task.title }}</td>
+                            <td class="fw-semibold" style="vertical-align: middle;">
+                                {% if task.status.value == 'completed' %}
+                                    <span class="text-muted text-decoration-line-through">{{ task.title }}</span>
+                                {% else %}
+                                    {{ task.title }}
+                                {% endif %}
+                            </td>
 
                             <td style="vertical-align: middle; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                                 {% if task.description %}
@@ -59,18 +82,80 @@
                             <td style="vertical-align: middle;">
                                 {% set priorityValue = task.priority.value %}
                                 <span class="priority-badge priority-{{ priorityValue }}">
-                                    {% if priorityValue == 'high' %}Высокий
-                                    {% elseif priorityValue == 'medium' %}Средний
-                                    {% else %}Низкий{% endif %}
+                                    {% if priorityValue == 'high' %}
+                                        Высокий
+                                    {% elseif priorityValue == 'medium' %}
+                                        Средний
+                                    {% else %}
+                                        Низкий
+                                    {% endif %}
                                 </span>
                             </td>
 
-                            <td style="vertical-align: middle; white-space: nowrap;">{{ task.startTime ? task.startTime|date('d.m.Y H:i') : '—' }}</td>
-                            <td style="vertical-align: middle; white-space: nowrap;">{{ task.endTime ? task.endTime|date('d.m.Y H:i') : '—' }}</td>
+                            <td style="vertical-align: middle; white-space: nowrap;">
+                                <div class="d-flex flex-column gap-1 align-items-start">
+                                    {% if task.status.value == 'completed' %}
+                                        <span class="badge bg-success">✓ Завершено</span>
+                                    {% elseif task.status.value == 'in_progress' %}
+                                        <span class="badge bg-warning text-dark">⏳ В работе</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">○ Ожидание</span>
+                                    {% endif %}
+
+                                    {% if task.status.value != 'completed' %}
+                                        <form
+                                            method="post"
+                                            action="{{ path('task_update_status', {id: task.id}) }}"
+                                            data-turbo="false"
+                                            onclick="event.stopPropagation()"
+                                            class="d-inline"
+                                        >
+                                            <input type="hidden" name="_token" value="{{ csrf_token('task_status_' ~ task.id) }}">
+                                            <input type="hidden" name="status" value="completed">
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-success py-0 px-2"
+                                                title="Завершить задачу"
+                                            >
+                                                Завершить
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form
+                                            method="post"
+                                            action="{{ path('task_update_status', {id: task.id}) }}"
+                                            data-turbo="false"
+                                            onclick="event.stopPropagation()"
+                                            class="d-inline"
+                                        >
+                                            <input type="hidden" name="_token" value="{{ csrf_token('task_status_' ~ task.id) }}">
+                                            <input type="hidden" name="status" value="waiting">
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                                title="Вернуть задачу в ожидание"
+                                            >
+                                                Вернуть
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </td>
+
+                            <td style="vertical-align: middle; white-space: nowrap;">
+                                {{ task.startTime ? task.startTime|date('d.m.Y H:i') : '—' }}
+                            </td>
+
+                            <td style="vertical-align: middle; white-space: nowrap;">
+                                {{ task.endTime ? task.endTime|date('d.m.Y H:i') : '—' }}
+                            </td>
 
                             <td style="vertical-align: middle; white-space: nowrap;">
                                 {% if task.endTime %}
                                     {% set now = date() %}
+
                                     {% if task.status.value == 'completed' %}
                                         <span class="text-success fw-semibold">Выполнена</span>
                                     {% elseif task.endTime < now %}
@@ -85,18 +170,24 @@
                             </td>
 
                             <td style="vertical-align: middle;">
-                                <a href="{{ path('task_edit', {id: task.id}) }}"
-                                   class="btn btn-sm btn-outline-primary"
-                                   onclick="event.stopPropagation()">Изменить</a>
+                                <a
+                                    href="{{ path('task_edit', {id: task.id}) }}"
+                                    class="btn btn-sm btn-outline-primary"
+                                    onclick="event.stopPropagation()"
+                                >
+                                    Изменить
+                                </a>
                             </td>
 
                             <td class="pe-4" style="vertical-align: middle;">
-                                <form action="{{ path('task_delete', {id: task.id}) }}"
-                                      method="POST"
-                                      data-turbo="false"
-                                      onsubmit="return confirm('Удалить задачу «{{ task.title }}»?')"
-                                      onclick="event.stopPropagation()"
-                                      style="display:inline;">
+                                <form
+                                    action="{{ path('task_delete', {id: task.id}) }}"
+                                    method="post"
+                                    data-turbo="false"
+                                    onsubmit="return confirm('Удалить задачу «{{ task.title }}»?')"
+                                    onclick="event.stopPropagation()"
+                                    style="display:inline;"
+                                >
                                     <input type="hidden" name="_token" value="{{ csrf_token('task-delete-' ~ task.id) }}">
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
                                 </form>
@@ -105,17 +196,21 @@
 
                         {% if task.children is not empty %}
                             <tr id="subtasks-{{ task.id }}" class="subtask-row d-none">
-                                <td colspan="10" class="p-0 border-0">
+                                <td colspan="11" class="p-0 border-0">
                                     <div class="subtask-panel px-4 py-3">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <span class="text-muted small fw-semibold">
                                                 📎 Подзадачи ({{ task.children|length }})
                                             </span>
-                                            <a href="{{ path('task_subtask_create', {id: task.id}) }}"
-                                               class="btn btn-sm btn-outline-secondary">
+
+                                            <a
+                                                href="{{ path('task_subtask_new', {id: task.id}) }}"
+                                                class="btn btn-sm btn-outline-secondary"
+                                            >
                                                 + Добавить подзадачу
                                             </a>
                                         </div>
+
                                         <table class="table table-sm mb-0 subtask-table">
                                             <thead class="table-light">
                                             <tr>
@@ -127,54 +222,126 @@
                                                 <th class="text-center">Удалить</th>
                                             </tr>
                                             </thead>
+
                                             <tbody>
                                             {% for sub in task.children %}
-                                                <tr class="task-row {% if sub.status.value == 'completed' %}subtask-completed{% endif %}"
-                                                    onclick="window.location='{{ path('task_show', {id: sub.id}) }}'">
+                                                <tr
+                                                    class="task-row {% if sub.status.value == 'completed' %}subtask-completed{% endif %}"
+                                                    onclick="window.location='{{ path('task_show', {id: sub.id}) }}'"
+                                                >
                                                     <td style="vertical-align: middle; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                                         <span class="text-muted me-1">↳</span>
+
                                                         {% if sub.status.value == 'completed' %}
-                                                            <span class="text-decoration-line-through text-muted">{{ sub.title }}</span>
+                                                            <span class="text-decoration-line-through text-muted">
+                                                                {{ sub.title }}
+                                                            </span>
                                                         {% else %}
                                                             <span class="fw-semibold">{{ sub.title }}</span>
                                                         {% endif %}
                                                     </td>
+
                                                     <td style="vertical-align: middle; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                                                         {% if sub.description %}
-                                                            <span class="text-muted">{{ sub.description|length > 20 ? sub.description|slice(0, 20) ~ '…' : sub.description }}</span>
+                                                            <span class="text-muted">
+                                                                {{ sub.description|length > 20 ? sub.description|slice(0, 20) ~ '…' : sub.description }}
+                                                            </span>
                                                         {% else %}
                                                             <span class="text-muted">—</span>
                                                         {% endif %}
                                                     </td>
+
                                                     <td style="vertical-align: middle; white-space: nowrap;">
                                                         {% set sp = sub.priority.value %}
+
                                                         <span class="priority-badge priority-{{ sp }}">
-                                                            {% if sp == 'high' %}Высок.
-                                                            {% elseif sp == 'medium' %}Средн.
-                                                            {% else %}Низкий{% endif %}
+                                                            {% if sp == 'high' %}
+                                                                Высок.
+                                                            {% elseif sp == 'medium' %}
+                                                                Средн.
+                                                            {% else %}
+                                                                Низкий
+                                                            {% endif %}
                                                         </span>
                                                     </td>
+
                                                     <td style="vertical-align: middle; white-space: nowrap;">
-                                                        {% if sub.status.value == 'completed' %}
-                                                            <span class="badge bg-success-subtle text-success border border-success-subtle">✓ Готово</span>
-                                                        {% elseif sub.status.value == 'in_progress' %}
-                                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle">⏳ В работе</span>
-                                                        {% else %}
-                                                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">○ Ждёт</span>
-                                                        {% endif %}
+                                                        <div class="d-flex flex-column gap-1 align-items-start">
+                                                            {% if sub.status.value == 'completed' %}
+                                                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                                    ✓ Готово
+                                                                </span>
+                                                            {% elseif sub.status.value == 'in_progress' %}
+                                                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                                                    ⏳ В работе
+                                                                </span>
+                                                            {% else %}
+                                                                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                                                    ○ Ждёт
+                                                                </span>
+                                                            {% endif %}
+
+                                                            {% if sub.status.value != 'completed' %}
+                                                                <form
+                                                                    method="post"
+                                                                    action="{{ path('task_update_status', {id: sub.id}) }}"
+                                                                    data-turbo="false"
+                                                                    onclick="event.stopPropagation()"
+                                                                    class="d-inline"
+                                                                >
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('task_status_' ~ sub.id) }}">
+                                                                    <input type="hidden" name="status" value="completed">
+
+                                                                    <button
+                                                                        type="submit"
+                                                                        class="btn btn-sm btn-outline-success py-0 px-2"
+                                                                        title="Завершить подзадачу"
+                                                                    >
+                                                                        Завершить
+                                                                    </button>
+                                                                </form>
+                                                            {% else %}
+                                                                <form
+                                                                    method="post"
+                                                                    action="{{ path('task_update_status', {id: sub.id}) }}"
+                                                                    data-turbo="false"
+                                                                    onclick="event.stopPropagation()"
+                                                                    class="d-inline"
+                                                                >
+                                                                    <input type="hidden" name="_token" value="{{ csrf_token('task_status_' ~ sub.id) }}">
+                                                                    <input type="hidden" name="status" value="waiting">
+
+                                                                    <button
+                                                                        type="submit"
+                                                                        class="btn btn-sm btn-outline-secondary py-0 px-2"
+                                                                        title="Вернуть подзадачу в ожидание"
+                                                                    >
+                                                                        Вернуть
+                                                                    </button>
+                                                                </form>
+                                                            {% endif %}
+                                                        </div>
                                                     </td>
+
                                                     <td style="vertical-align: middle; white-space: nowrap; text-align: center;">
-                                                        <a href="{{ path('task_edit', {id: sub.id}) }}"
-                                                           class="btn btn-sm btn-outline-primary"
-                                                           onclick="event.stopPropagation()">Изменить</a>
+                                                        <a
+                                                            href="{{ path('task_edit', {id: sub.id}) }}"
+                                                            class="btn btn-sm btn-outline-primary"
+                                                            onclick="event.stopPropagation()"
+                                                        >
+                                                            Изменить
+                                                        </a>
                                                     </td>
+
                                                     <td style="vertical-align: middle; white-space: nowrap; text-align: center;">
-                                                        <form action="{{ path('task_delete', {id: sub.id}) }}"
-                                                              method="POST"
-                                                              data-turbo="false"
-                                                              onsubmit="return confirm('Удалить подзадачу «{{ sub.title }}»?')"
-                                                              onclick="event.stopPropagation()"
-                                                              style="display:inline;">
+                                                        <form
+                                                            action="{{ path('task_delete', {id: sub.id}) }}"
+                                                            method="post"
+                                                            data-turbo="false"
+                                                            onsubmit="return confirm('Удалить подзадачу «{{ sub.title }}»?')"
+                                                            onclick="event.stopPropagation()"
+                                                            style="display:inline;"
+                                                        >
                                                             <input type="hidden" name="_token" value="{{ csrf_token('task-delete-' ~ sub.id) }}">
                                                             <button type="submit" class="btn btn-sm btn-outline-danger">Удалить</button>
                                                         </form>
@@ -202,7 +369,13 @@
 </div>
 
 <style>
-    .task-row { cursor: pointer; }
+    .task-row {
+        cursor: pointer;
+    }
+
+    .task-completed {
+        opacity: 0.75;
+    }
 
     .subtask-panel {
         background: #f8f9fa;
@@ -226,7 +399,6 @@
         vertical-align: middle;
     }
 
-    /* ── Подзадачи: без fixed, браузер сам считает ширины ── */
     .subtask-table {
         width: 100%;
         border-collapse: collapse;
@@ -249,6 +421,10 @@
         const targetId = btn.dataset.target;
         const row      = document.getElementById(targetId);
         const icon     = btn.querySelector('.toggle-icon');
+
+        if (!row || !icon) {
+            return;
+        }
 
         if (row.classList.contains('d-none')) {
             row.classList.remove('d-none');

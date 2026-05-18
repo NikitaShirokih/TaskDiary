@@ -4,20 +4,20 @@
 
 {% block body %}
 
-    {# ── Хлебные крошки ── #}
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ path('task_list') }}">Задачи</a></li>
+
             {% if task.isSubtask %}
                 <li class="breadcrumb-item">
                     <a href="{{ path('task_show', {id: task.parent.id}) }}">{{ task.parent.title }}</a>
                 </li>
             {% endif %}
+
             <li class="breadcrumb-item active text-break" aria-current="page">{{ task.title }}</li>
         </ol>
     </nav>
 
-    {# ── Заголовок ── #}
     <div class="mb-4">
         <h1 class="mb-1" style="word-break: break-word; overflow-wrap: break-word;">
             {% if task.isSubtask %}
@@ -25,22 +25,25 @@
             {% endif %}
             {{ task.title }}
         </h1>
+
         <p class="text-muted mb-3">
             {% if task.isSubtask %}
-                Подзадача · <a href="{{ path('task_show', {id: task.parent.id}) }}" class="text-decoration-none">{{ task.parent.title }}</a>
+                Подзадача ·
+                <a href="{{ path('task_show', {id: task.parent.id}) }}" class="text-decoration-none">
+                    {{ task.parent.title }}
+                </a>
             {% else %}
                 Детали задачи
             {% endif %}
         </p>
+
         <div class="d-flex gap-2 flex-wrap">
             <a href="{{ path('task_edit', {id: task.id}) }}" class="btn btn-outline-primary">Редактировать</a>
 
-            {# ── Кнопка GigaChat ── #}
             <button id="ai-btn" class="btn btn-outline-warning">
                 🤖 Спросить GigaChat
             </button>
 
-            {# ── Кнопка экспорта JSON ── #}
             <a href="{{ path('task_export_json', {id: task.id}) }}" class="btn btn-outline-success">
                 ⬇️ Экспорт JSON
             </a>
@@ -48,20 +51,21 @@
             {% if not task.isSubtask %}
                 <a href="{{ path('task_list') }}" class="btn btn-outline-secondary">← Назад к списку</a>
             {% else %}
-                <a href="{{ path('task_show', {id: task.parent.id}) }}" class="btn btn-outline-secondary">← К родительской</a>
+                <a href="{{ path('task_show', {id: task.parent.id}) }}" class="btn btn-outline-secondary">
+                    ← К родительской
+                </a>
             {% endif %}
         </div>
     </div>
 
-    {# ── Flash-сообщения ── #}
     {% for message in app.flashes('success') %}
         <div class="alert alert-success">{{ message }}</div>
     {% endfor %}
+
     {% for message in app.flashes('error') %}
         <div class="alert alert-danger">{{ message }}</div>
     {% endfor %}
 
-    {# ── Блок ответа GigaChat ── #}
     <div id="ai-result" class="mb-4" style="display:none;">
         <div class="card border-warning shadow-sm">
             <div class="card-body">
@@ -69,27 +73,26 @@
                     <h6 class="fw-semibold text-warning mb-0">🤖 Совет от GigaChat</h6>
                     <button id="ai-close" class="btn-close" aria-label="Закрыть"></button>
                 </div>
+
                 <div id="ai-loading" style="display:none;" class="text-muted">
                     <div class="spinner-border spinner-border-sm text-warning me-2" role="status"></div>
                     Думаю...
                 </div>
+
                 <p id="ai-text" class="mb-0 text-dark" style="white-space: pre-wrap; word-break: break-word;"></p>
             </div>
         </div>
     </div>
 
-    {# ── Основная карточка ── #}
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body p-4">
             <div class="row g-4">
 
-                {# Описание #}
                 <div class="col-md-8">
                     <h5 class="fw-semibold mb-2">Описание</h5>
                     <p class="text-muted" style="word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap;">{{ task.description ?: '—' }}</p>
                 </div>
 
-                {# Мета-данные #}
                 <div class="col-md-4">
                     <ul class="list-group list-group-flush">
 
@@ -150,34 +153,36 @@
 
                     </ul>
                 </div>
+
             </div>
         </div>
     </div>
 
-    {# ── Блок подзадач (только для корневых задач) ── #}
     {% if not task.isSubtask %}
         <div class="card shadow-sm border-0">
             <div class="card-header bg-white border-0 pt-4 px-4 pb-0 d-flex justify-content-between align-items-center">
                 <div>
                     <h5 class="fw-semibold mb-0">📋 Подзадачи</h5>
+
                     {% if task.hasChildren %}
-                        {% set total     = task.children|length %}
+                        {% set total = task.children|length %}
                         {% set completed = task.children|filter(s => s.status.value == 'completed')|length %}
                         <p class="text-muted small mb-0">Выполнено {{ completed }} из {{ total }}</p>
                     {% endif %}
                 </div>
-                <a href="{{ path('task_subtask_create', {id: task.id}) }}" class="btn btn-sm btn-primary">
+
+                <a href="{{ path('task_subtask_new', {id: task.id}) }}" class="btn btn-sm btn-primary">
                     ➕ Добавить подзадачу
                 </a>
             </div>
 
             <div class="card-body px-4 pb-4 pt-3">
 
-                {# Прогресс-бар #}
                 {% if task.hasChildren %}
-                    {% set total     = task.children|length %}
+                    {% set total = task.children|length %}
                     {% set completed = task.children|filter(s => s.status.value == 'completed')|length %}
-                    {% set percent   = total > 0 ? (completed / total * 100)|round : 0 %}
+                    {% set percent = total > 0 ? (completed / total * 100)|round : 0 %}
+
                     <div class="progress mb-4" style="height: 8px;">
                         <div
                             class="progress-bar bg-success"
@@ -190,13 +195,11 @@
                     </div>
                 {% endif %}
 
-                {# Список подзадач #}
                 {% if task.hasChildren %}
                     <ul class="list-group list-group-flush">
                         {% for subtask in task.children %}
                             <li class="list-group-item px-0 d-flex align-items-start justify-content-between gap-2 flex-wrap">
 
-                                {# Статус-иконка + название #}
                                 <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0">
                                     {% if subtask.status.value == 'completed' %}
                                         <span class="text-success fs-5 flex-shrink-0">✔</span>
@@ -206,20 +209,24 @@
                                         <span class="text-secondary fs-5 flex-shrink-0">○</span>
                                     {% endif %}
 
-                                    <a href="{{ path('task_show', {id: subtask.id}) }}"
-                                       class="text-decoration-none {{ subtask.status.value == 'completed' ? 'text-muted text-decoration-line-through' : '' }}"
-                                       style="word-break: break-word; overflow-wrap: break-word; min-width: 0;">
+                                    <a
+                                        href="{{ path('task_show', {id: subtask.id}) }}"
+                                        class="text-decoration-none {{ subtask.status.value == 'completed' ? 'text-muted text-decoration-line-through' : '' }}"
+                                        style="word-break: break-word; overflow-wrap: break-word; min-width: 0;"
+                                    >
                                         {{ subtask.title }}
                                     </a>
 
                                     {% if subtask.isOverdue %}
-                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle flex-shrink-0">просрочено</span>
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle flex-shrink-0">
+                                            просрочено
+                                        </span>
                                     {% endif %}
                                 </div>
 
-                                {# Приоритет + быстрые действия #}
                                 <div class="d-flex align-items-center gap-2 flex-shrink-0">
                                     {% set p = subtask.priority.value %}
+
                                     {% if p == 'high' %}
                                         <span class="badge bg-danger">Высокий</span>
                                     {% elseif p == 'medium' %}
@@ -228,21 +235,32 @@
                                         <span class="badge bg-success">Низкий</span>
                                     {% endif %}
 
-                                    {# Быстрое завершение #}
                                     {% if subtask.status.value != 'completed' %}
-                                        <form method="post"
-                                              action="{{ path('task_update_status', {id: subtask.id}) }}"
-                                              class="d-inline">
+                                        <form
+                                            method="post"
+                                            action="{{ path('task_update_status', {id: subtask.id}) }}"
+                                            class="d-inline"
+                                        >
+                                            <input type="hidden" name="_token" value="{{ csrf_token('task_status_' ~ subtask.id) }}">
                                             <input type="hidden" name="status" value="completed">
-                                            <button type="submit"
-                                                    class="btn btn-sm btn-outline-success"
-                                                    title="Завершить">✔</button>
+
+                                            <button
+                                                type="submit"
+                                                class="btn btn-sm btn-outline-success"
+                                                title="Завершить"
+                                            >
+                                                ✔
+                                            </button>
                                         </form>
                                     {% endif %}
 
-                                    <a href="{{ path('task_edit', {id: subtask.id}) }}"
-                                       class="btn btn-sm btn-outline-secondary"
-                                       title="Редактировать">✏️</a>
+                                    <a
+                                        href="{{ path('task_edit', {id: subtask.id}) }}"
+                                        class="btn btn-sm btn-outline-secondary"
+                                        title="Редактировать"
+                                    >
+                                        ✏️
+                                    </a>
                                 </div>
 
                             </li>
@@ -260,39 +278,51 @@
 
 {% block javascripts %}
     <script>
-        const aiBtn     = document.getElementById('ai-btn');
-        const aiResult  = document.getElementById('ai-result');
-        const aiText    = document.getElementById('ai-text');
-        const aiLoading = document.getElementById('ai-loading');
-        const aiClose   = document.getElementById('ai-close');
+        document.addEventListener('DOMContentLoaded', function () {
+            const aiBtn     = document.getElementById('ai-btn');
+            const aiResult  = document.getElementById('ai-result');
+            const aiText    = document.getElementById('ai-text');
+            const aiLoading = document.getElementById('ai-loading');
+            const aiClose   = document.getElementById('ai-close');
 
-        aiBtn.addEventListener('click', async function () {
-            aiBtn.disabled = true;
-            aiText.textContent = '';
-            aiLoading.style.display = 'block';
-            aiResult.style.display  = 'block';
-            aiResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-            try {
-                const response = await fetch('{{ path('task_ai_analyze', {id: task.id}) }}', {
-                    method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                });
-
-                const data = await response.json();
-                aiText.textContent = data.result ?? data.error ?? 'Неизвестная ошибка';
-
-            } catch (e) {
-                aiText.textContent = '❌ Ошибка соединения с GigaChat';
-            } finally {
-                aiLoading.style.display = 'none';
-                aiBtn.disabled = false;
+            if (!aiBtn || !aiResult || !aiText || !aiLoading || !aiClose) {
+                return;
             }
-        });
 
-        aiClose.addEventListener('click', function () {
-            aiResult.style.display = 'none';
-            aiText.textContent = '';
+            aiBtn.addEventListener('click', async function () {
+                aiBtn.disabled = true;
+                aiText.textContent = '';
+                aiLoading.style.display = 'block';
+                aiResult.style.display = 'block';
+                aiResult.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                try {
+                    const response = await fetch('{{ path('task_ai_analyze', {id: task.id}) }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok || data.error) {
+                        throw new Error(data.error ?? 'Неизвестная ошибка');
+                    }
+
+                    aiText.textContent = data.result;
+                } catch (error) {
+                    aiText.textContent = '❌ ' + error.message;
+                } finally {
+                    aiLoading.style.display = 'none';
+                    aiBtn.disabled = false;
+                }
+            });
+
+            aiClose.addEventListener('click', function () {
+                aiResult.style.display = 'none';
+                aiText.textContent = '';
+            });
         });
     </script>
 {% endblock %}

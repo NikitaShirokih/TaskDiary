@@ -11,7 +11,8 @@ BLUE   = \033[0;34m
 NC     = \033[0m
 
 # ─── Переменные ───────────────────────────────────────────────────────────────
-COMPOSE = docker compose -f .docker/docker-compose.yaml --env-file .env.local
+COMPOSE = docker compose -f .docker/docker-compose.yaml --project-directory .docker --env-file .env.local
+
 PHP     = $(COMPOSE) exec php
 CONSOLE = $(PHP) php bin/console
 
@@ -35,6 +36,25 @@ init: ## Первый запуск проекта с нуля
 		cp .env.local.example .env.local; \
 		echo "$(GREEN)✅ .env.local создан из .env.local.example$(NC)"; \
 	fi
+
+	@echo "$(YELLOW)Проверяем APP_SECRET...$(NC)"
+	@# ===== APP_SECRET START =====
+	@if grep -q '^APP_SECRET=' .env.local; then \
+		CURRENT_SECRET=$$(grep '^APP_SECRET=' .env.local | head -n 1 | cut -d '=' -f2-); \
+		if [ -z "$$CURRENT_SECRET" ] || [ "$$CURRENT_SECRET" = "your_secret" ] || [ "$$CURRENT_SECRET" = "change_me" ]; then \
+			GENERATED_SECRET=$$(openssl rand -hex 32); \
+			awk -v secret="$$GENERATED_SECRET" 'BEGIN { done=0 } /^APP_SECRET=/ && done==0 { print "APP_SECRET=" secret; done=1; next } /^APP_SECRET=/ { next } { print } END { if (!done) print "APP_SECRET=" secret }' .env.local > .env.local.tmp && mv .env.local.tmp .env.local; \
+			echo "$(GREEN)✅ APP_SECRET сгенерирован и записан в .env.local$(NC)"; \
+		else \
+			echo "$(YELLOW)APP_SECRET уже задан — пропускаем$(NC)"; \
+		fi; \
+	else \
+		GENERATED_SECRET=$$(openssl rand -hex 32); \
+		printf '\nAPP_SECRET=%s\n' "$$GENERATED_SECRET" >> .env.local; \
+		echo "$(GREEN)✅ APP_SECRET добавлен в .env.local$(NC)"; \
+	fi
+	@# ===== APP_SECRET END =====
+
 	@echo "$(YELLOW)Подготавливаем nginx конфиг...$(NC)"
 	@mkdir -p .docker/nginx
 	@if [ ! -f .docker/nginx/default.conf ]; then \
@@ -55,7 +75,7 @@ init: ## Первый запуск проекта с нуля
 	@$(CONSOLE) doctrine:fixtures:load --no-interaction
 	@echo ""
 	@echo "$(GREEN)✅ Проект готов к работе!$(NC)"
-	@echo "$(BLUE)Открывай: http://localhost:8082$(NC)"
+	@echo "$(BLUE)Открывай: http://localhost:8082/login$(NC)"
 	@echo ""
 
 start: ## Запустить проект

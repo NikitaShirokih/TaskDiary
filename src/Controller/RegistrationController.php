@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Form\RegistrationFormType;
 use App\Service\RegistrationService;
+use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,27 +20,29 @@ final class RegistrationController extends AbstractController
     ) {
     }
 
-    #[Route('/register', name: 'app_register')]
+    #[Route('/register', name: 'app_register', methods: ['GET', 'POST'])]
     public function register(Request $request): Response
     {
-        if (null !== $this->getUser()) {
-            return $this->redirectToRoute('app_dashboard');
-        }
-
         $form = $this->createForm(RegistrationFormType::class, new User());
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             try {
-                $this->registrationService->register(
-                    $form->getData(),
-                    $form->get('plainPassword')->getData()
-                );
+                /** @var User $user */
+                $user = $form->getData();
+
+                $plainPassword = $form->get('plainPassword')->getData();
+
+                if (!is_string($plainPassword) || '' === trim($plainPassword)) {
+                    throw new RuntimeException('Некорректный пароль.');
+                }
+
+                $this->registrationService->register($user, $plainPassword);
 
                 $this->addFlash('success', 'Аккаунт успешно создан! Войдите в систему.');
 
                 return $this->redirectToRoute('app_login');
-            } catch (\RuntimeException $e) {
+            } catch (RuntimeException $e) {
                 $this->addFlash('error', $e->getMessage());
             }
         }

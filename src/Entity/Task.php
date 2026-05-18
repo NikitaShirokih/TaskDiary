@@ -109,10 +109,6 @@ class Task
         ?\DateTimeInterface $startTime,
         ?\DateTimeInterface $endTime,
     ): void {
-        if (null !== $startTime && null !== $endTime && $endTime <= $startTime) {
-            throw new \LogicException('Дата окончания должна быть позже даты начала.');
-        }
-
         $this->startTime = $startTime;
         $this->endTime = $endTime;
     }

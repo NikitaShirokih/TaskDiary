@@ -5,7 +5,6 @@
 {% block body %}
     <div class="container py-4">
 
-        {# ── Хлебные крошки (только для подзадачи) ── #}
         {% if parent is defined and parent %}
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb">
@@ -20,7 +19,6 @@
             </nav>
         {% endif %}
 
-        {# ── Заголовок ── #}
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 {% if parent is defined and parent %}
@@ -39,20 +37,26 @@
                     <p class="text-muted mb-0">Создайте новую задачу в вашем дневнике</p>
                 {% endif %}
             </div>
+
             <div class="d-flex gap-2">
                 <a href="{{ path('app_dashboard') }}" class="btn btn-outline-secondary">На главную</a>
+
                 {% if parent is defined and parent %}
-                    <a href="{{ path('task_show', {id: parent.id}) }}" class="btn btn-outline-primary">К родительской задаче</a>
+                    <a href="{{ path('task_show', {id: parent.id}) }}" class="btn btn-outline-primary">
+                        К родительской задаче
+                    </a>
                 {% else %}
-                    <a href="{{ path('task_list') }}" class="btn btn-outline-primary">К списку задач</a>
+                    <a href="{{ path('task_list') }}" class="btn btn-outline-primary">
+                        К списку задач
+                    </a>
                 {% endif %}
             </div>
         </div>
 
-        {# ── Flash-сообщения ── #}
         {% for message in app.flashes('success') %}
             <div class="alert alert-success">{{ message }}</div>
         {% endfor %}
+
         {% for message in app.flashes('error') %}
             <div class="alert alert-danger">{{ message }}</div>
         {% endfor %}
@@ -68,10 +72,19 @@
                     </div>
                 {% endif %}
 
-                <form method="post">
-                    <input type="hidden" name="_token" value="{{ csrf_token(parent is defined and parent ? 'subtask_create' : 'task_create') }}">
+                <form
+                    method="post"
+                    action="{{ parent is defined and parent
+                    ? path('task_subtask_create', {id: parent.id})
+                    : path('task_create')
+                    }}"
+                >
+                    <input
+                        type="hidden"
+                        name="_token"
+                        value="{{ csrf_token(parent is defined and parent ? 'subtask_create' : 'task_create') }}"
+                    >
 
-                    {# ── Скрытый parent_id для подзадачи ── #}
                     {% if parent is defined and parent %}
                         <input type="hidden" name="parent_id" value="{{ parent.id }}">
                         <input type="hidden" name="status" value="waiting">
@@ -79,7 +92,6 @@
 
                     <div class="row g-4">
 
-                        {# Название #}
                         <div class="col-md-6">
                             <label for="title" class="form-label fw-semibold">Название задачи</label>
                             <input
@@ -92,23 +104,20 @@
                             >
                         </div>
 
-                        {# Приоритет #}
                         <div class="col-md-6">
                             <label for="priority" class="form-label fw-semibold">Приоритет</label>
                             {% set currentPriority = taskData ? taskData.priority : app.request.request.getString('priority', 'medium') %}
                             <select id="priority" name="priority" class="form-select">
-                                <option value="low"    {{ currentPriority == 'low'    ? 'selected' }}>Низкий</option>
+                                <option value="low" {{ currentPriority == 'low' ? 'selected' }}>Низкий</option>
                                 <option value="medium" {{ currentPriority == 'medium' ? 'selected' }}>Средний</option>
-                                <option value="high"   {{ currentPriority == 'high'   ? 'selected' }}>Высокий</option>
+                                <option value="high" {{ currentPriority == 'high' ? 'selected' }}>Высокий</option>
                             </select>
                         </div>
 
-                        {# Описание #}
                         <div class="col-12">
                             <div class="d-flex justify-content-between align-items-center mb-1">
                                 <label for="description" class="form-label fw-semibold mb-0">Описание</label>
 
-                                {# Dropdown с выбором тона #}
                                 <div class="dropdown">
                                     <button
                                         type="button"
@@ -120,6 +129,7 @@
                                         <span id="improve-btn-text">✨ Улучшить с GigaChat</span>
                                         <span id="improve-btn-spinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
                                     </button>
+
                                     <ul class="dropdown-menu dropdown-menu-end">
                                         <li><h6 class="dropdown-header">Выберите стиль</h6></li>
                                         <li>
@@ -141,24 +151,21 @@
                                 </div>
                             </div>
 
-                            <div class="position-relative">
-                                <textarea
-                                    id="description"
-                                    name="description"
-                                    rows="4"
-                                    class="form-control"
-                                >{{ taskData ? taskData.description : app.request.request.get('description') }}</textarea>
-                            </div>
+                            <textarea
+                                id="description"
+                                name="description"
+                                rows="4"
+                                class="form-control"
+                            >{{ taskData ? taskData.description : app.request.request.get('description') }}</textarea>
+
                             <div id="improve-error" class="text-danger small mt-1 d-none"></div>
                             <div id="improve-success" class="text-success small mt-1 d-none">
                                 ✅ Описание улучшено! Вы можете отредактировать его перед сохранением.
                             </div>
                         </div>
 
-                        {# ── Поля только для обычной задачи ── #}
                         {% if not (parent is defined and parent) %}
 
-                            {# Дата начала #}
                             <div class="col-md-6">
                                 <label for="start_time" class="form-label fw-semibold">Дата начала</label>
                                 <input
@@ -170,7 +177,6 @@
                                 >
                             </div>
 
-                            {# Дата окончания #}
                             <div class="col-md-6">
                                 <label for="end_time" class="form-label fw-semibold">Дата окончания</label>
                                 <input
@@ -182,23 +188,23 @@
                                 >
                             </div>
 
-                            {# Статус #}
                             <div class="col-md-6">
                                 <label for="status" class="form-label fw-semibold">Статус</label>
                                 {% set currentStatus = taskData ? taskData.status : app.request.request.getString('status', 'waiting') %}
                                 <select id="status" name="status" class="form-select">
-                                    <option value="waiting"     {{ currentStatus == 'waiting'     ? 'selected' }}>Ожидание</option>
+                                    <option value="waiting" {{ currentStatus == 'waiting' ? 'selected' }}>Ожидание</option>
                                     <option value="in_progress" {{ currentStatus == 'in_progress' ? 'selected' }}>В работе</option>
-                                    <option value="completed"   {{ currentStatus == 'completed'   ? 'selected' }}>Завершено</option>
+                                    <option value="completed" {{ currentStatus == 'completed' ? 'selected' }}>Завершено</option>
                                 </select>
                             </div>
 
-                            {# Категория #}
                             <div class="col-md-6">
                                 <label for="category" class="form-label fw-semibold">Категория</label>
                                 {% set currentCategory = taskData ? taskData.categoryId : app.request.request.get('category') %}
                                 <select id="category" name="category" class="form-select" required>
-                                    <option value="" disabled {{ currentCategory is empty ? 'selected' }}>— Выберите категорию —</option>
+                                    <option value="" disabled {{ currentCategory is empty ? 'selected' }}>
+                                        — Выберите категорию —
+                                    </option>
                                     {% for category in categories %}
                                         <option value="{{ category.id }}" {{ currentCategory == category.id ? 'selected' }}>
                                             {{ category.name }}
@@ -207,21 +213,21 @@
                                 </select>
                             </div>
 
-                        {% endif %}{# /not subtask #}
+                        {% endif %}
 
-                    </div>{# /row #}
+                    </div>
 
                     <div class="d-flex gap-2 mt-4">
                         <button type="submit" class="btn btn-primary">
                             {{ parent is defined and parent ? 'Создать подзадачу' : 'Сохранить задачу' }}
                         </button>
+
                         {% if parent is defined and parent %}
                             <a href="{{ path('task_show', {id: parent.id}) }}" class="btn btn-light border">Отмена</a>
                         {% else %}
                             <a href="{{ path('task_list') }}" class="btn btn-light border">Отмена</a>
                         {% endif %}
                     </div>
-
                 </form>
             </div>
         </div>
@@ -244,7 +250,6 @@
                     const description = textarea.value.trim();
                     const title       = titleInput ? titleInput.value.trim() : '';
 
-                    // Сбрасываем сообщения
                     errorBlock.classList.add('d-none');
                     successBlock.classList.add('d-none');
 
@@ -254,7 +259,6 @@
                         return;
                     }
 
-                    // Блокируем кнопку, показываем спиннер
                     btnText.classList.add('d-none');
                     spinner.classList.remove('d-none');
                     improveBtn.disabled = true;
@@ -277,7 +281,6 @@
 
                         textarea.value = data.result;
                         successBlock.classList.remove('d-none');
-
                     } catch (err) {
                         errorBlock.textContent = '❌ ' + err.message;
                         errorBlock.classList.remove('d-none');
@@ -290,5 +293,4 @@
             });
         });
     </script>
-
 {% endblock %}

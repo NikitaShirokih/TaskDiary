@@ -31,17 +31,6 @@
 
 ---
 
-## Структура
-
-```
-src/
-├── Controller/   # HTTP-слой
-├── Entity/       # Doctrine-сущности
-├── Repository/   # Запросы к БД
-├── Service/      # Бизнес-логика
-└── DataFixtures/ # Тестовые данные
-```
-
 Пример всех переменных — в файле `.env.local.example`
 
 ---
@@ -56,8 +45,6 @@ cd TaskDiary
 make init
 ```
 
-Приложение запустится на `http://localhost:8082`
-
 После первого запуска укажи реальные значения в `.env.local.example`:
 
 ```env
@@ -70,23 +57,7 @@ GIGACHAT_API_KEY=your_key
 ```bash
 make help          # список всех команд
 
-make start         # запустить проект
-make stop          # остановить проект
-make restart       # перезапустить проект
-make rebuild       # пересобрать контейнеры
-
-make migrate       # выполнить миграции
-make db-reset      # сбросить и пересоздать БД
-make reset         # полный сброс проекта
-
-make lint          # стиль + анализ + тесты
-make prod-deploy   # production deploy
-
-make php-shell     # войти в PHP-контейнер
-make logs          # логи контейнеров
 ```
-
----
 
 ## Лицензия
 
