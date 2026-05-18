@@ -15,6 +15,7 @@ use App\Enum\TaskRights;
  */
 final class TaskVoter extends Voter
 {
+    /** Cистемы авторизации на уровне объектов. */
     protected function supports(string $attribute, mixed $subject): bool
     {
         return TaskRights::OWNER->value === $attribute && $subject instanceof Task;
