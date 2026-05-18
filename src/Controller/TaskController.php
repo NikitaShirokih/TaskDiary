@@ -105,6 +105,35 @@ final class TaskController extends AbstractController
         );
     }
 
+    #[Route('/ai-improve-description', name: 'ai_improve_description', methods: ['POST'])]
+    public function aiImproveDescription(Request $request, AiService $aiService): JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        if (!is_array($data)) {
+            return new JsonResponse(['error' => 'Некорректный JSON.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $title = trim((string) ($data['title'] ?? ''));
+        $description = trim((string) ($data['description'] ?? ''));
+        $tone = ToneAi::fromMixed($data['tone'] ?? null);
+
+        if ('' === $description) {
+            return new JsonResponse(['error' => 'Описание не может быть пустым.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        try {
+            $result = $aiService->improveDescription($title, $description, $tone);
+
+            return new JsonResponse(['result' => $result]);
+        } catch (Throwable $e) {
+            return new JsonResponse(
+                ['error' => 'Ошибка GigaChat: '.$e->getMessage()],
+                Response::HTTP_INTERNAL_SERVER_ERROR
+            );
+        }
+    }
+
     #[Route('/{id<\d+>}/subtask/new', name: 'subtask_new', methods: ['GET'])]
     public function newSubtask(int $id): Response
     {
@@ -267,35 +296,6 @@ final class TaskController extends AbstractController
         } catch (Throwable $e) {
             return new JsonResponse(
                 ['error' => 'Ошибка: '.$e->getMessage()],
-                Response::HTTP_INTERNAL_SERVER_ERROR
-            );
-        }
-    }
-
-    #[Route('/ai-improve-description', name: 'ai_improve_description', methods: ['POST'])]
-    public function aiImproveDescription(Request $request, AiService $aiService): JsonResponse
-    {
-        $data = json_decode($request->getContent(), true);
-
-        if (!is_array($data)) {
-            return new JsonResponse(['error' => 'Некорректный JSON.'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $title = trim((string) ($data['title'] ?? ''));
-        $description = trim((string) ($data['description'] ?? ''));
-        $tone = ToneAi::fromMixed($data['tone'] ?? null);
-
-        if ('' === $description) {
-            return new JsonResponse(['error' => 'Описание не может быть пустым.'], Response::HTTP_BAD_REQUEST);
-        }
-
-        try {
-            $result = $aiService->improveDescription($title, $description, $tone);
-
-            return new JsonResponse(['result' => $result]);
-        } catch (Throwable $e) {
-            return new JsonResponse(
-                ['error' => 'Ошибка GigaChat: '.$e->getMessage()],
                 Response::HTTP_INTERNAL_SERVER_ERROR
             );
         }
