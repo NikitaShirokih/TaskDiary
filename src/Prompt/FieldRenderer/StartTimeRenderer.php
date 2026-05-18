@@ -1,0 +1,19 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Prompt\FieldRenderer;
+
+use App\Contract\FieldRendererInterface;
+use App\Dto\TaskPromptNode;
+
+class StartTimeRenderer implements FieldRendererInterface
+{
+    public function render(TaskPromptNode $node, string $indent): ?string
+    {
+        if ($node->task->getStartTime() === null) {
+            return null;
+        }
+        return sprintf('%s  Начало: %s', $indent, $node->task->getStartTime());
+    }
+}
