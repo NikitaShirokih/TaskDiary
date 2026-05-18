@@ -33,7 +33,7 @@ final class AiService
         $prompt = $this->promptBuilder->build($promptData);
 
         return $this->askGigaChat(
-            systemMessage: 'Ты умный помощник по управлению задачами. Отвечай на русском языке, кратко, структурированно и по делу. Не используй markdown-разметку.',
+            systemMessage: 'Ты умный помощник по управлению задачами. Отвечай на русском языке, кратко, структурированно и по делу.',
             userPrompt: $prompt,
             temperature: 0.6,
             maxTokens: 500,
