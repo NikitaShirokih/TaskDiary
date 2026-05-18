@@ -8,6 +8,13 @@ use App\Dto\TaskPromptNode;
 
 final readonly class TaskRelationTreeRenderer
 {
+    /**
+     * @param list<FieldRendererInterface> $fieldRenderers
+     */
+    public function __construct(
+        private array $fieldRenderers,
+    ) {}
+
     public function render(TaskPromptNode $node): string
     {
         return trim($this->renderNode($node, 0));
@@ -19,12 +26,7 @@ final readonly class TaskRelationTreeRenderer
 
         $lines = [];
 
-        $lines[] = sprintf(
-            '%s- [%s] %s',
-            $indent,
-            $node->relationType->label(),
-            $node->title,
-        );
+        $lines[] = sprintf('%s- [%s] %s', $indent, $node->relationType->label(), $node->task->getTitle(),);
 
         foreach ($this->renderDetails($node, $indent) as $detailLine) {
             $lines[] = $detailLine;
@@ -52,31 +54,11 @@ final readonly class TaskRelationTreeRenderer
     {
         $lines = [];
 
-        if ($node->description !== null) {
-            $lines[] = sprintf('%s  Описание: %s', $indent, $node->description);
-        }
-
-        $lines[] = sprintf('%s  Статус: %s', $indent, $node->status);
-        $lines[] = sprintf('%s  Приоритет: %s', $indent, $node->priority);
-
-        if ($node->type!== null) {
-            $lines[] = sprintf('%s  Тип: %s', $indent, $node->type);
-        }
-
-        if ($node->startTime !== null) {
-            $lines[] = sprintf(
-                '%s  Начало: %s',
-                $indent,
-                $node->startTime->format('Y-m-d H:i'),
-            );
-        }
-
-        if ($node->endTime !== null) {
-            $lines[] = sprintf(
-                '%s  Окончание: %s',
-                $indent,
-                $node->endTime->format('Y-m-d H:i'),
-            );
+        foreach ($this->fieldRenderers as $renderer) {
+            $line = $renderer->render($node, $indent);
+            if ($line !== null) {
+                $lines[] = $line;
+            }
         }
 
         return $lines;

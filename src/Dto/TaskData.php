@@ -4,98 +4,104 @@ declare(strict_types=1);
 
 namespace App\Dto;
 
+use App\Enum\TaskPriority;
+use App\Enum\TaskStatus;
+use DateTimeImmutable;
+use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Validator\Constraints as Assert;
+use Throwable;
 
-final class TaskData
+final readonly class TaskData
 {
     public function __construct(
-        #[Assert\NotBlank(message: 'Название задачи обязательно')]
-        #[Assert\Length(
-            max: 255,
-            maxMessage: 'Название задачи не должно быть длиннее 255 символов'
-        )]
-        public readonly string $title,
+        #[Assert\NotBlank(message: 'Название задачи обязательно.')]
+        #[Assert\Length(max: 255, maxMessage: 'Название задачи не должно быть длиннее 255 символов.')]
+        public string $title,
 
-        #[Assert\Length(
-            max: 1000,
-            maxMessage: 'Описание не должно быть длиннее 1000 символов'
-        )]
-        public readonly ?string $description,
+        public ?string $description,
 
-        #[Assert\NotBlank(message: 'Приоритет обязателен')]
-        #[Assert\Choice(
-            choices: ['low', 'medium', 'high'],
-            message: 'Некорректный приоритет'
-        )]
-        public readonly string $priority,
+        #[Assert\NotBlank(message: 'Приоритет задачи обязателен.')]
+        public string $priority,
 
-        #[Assert\NotBlank(message: 'Статус обязателен')]
-        #[Assert\Choice(
-            choices: ['waiting', 'in_progress', 'completed'],
-            message: 'Некорректный статус'
-        )]
-        public readonly string $status,
+        #[Assert\NotBlank(message: 'Статус задачи обязателен.')]
+        public string $status,
 
-        public readonly ?\DateTimeImmutable $startTime,
-        public readonly ?\DateTimeImmutable $endTime,
+        public ?DateTimeImmutable $startTime,
 
-        public readonly ?int $categoryId,
+        public ?DateTimeImmutable $endTime,
 
-        public readonly ?int $parentId = null,
+        public ?int $categoryId,
     ) {
     }
 
     public static function fromRequest(Request $request): self
     {
-        $categoryId = $request->request->get('category');
-        $parentId = $request->request->get('parent_id');
+        $title = trim((string) $request->request->get('title', ''));
+
+        if ('' === $title) {
+            throw new InvalidArgumentException('Название задачи обязательно.');
+        }
+
+        $description = trim((string) $request->request->get('description', ''));
+
+        $priority = trim((string) $request->request->get('priority', TaskPriority::Medium->value));
+        $priority = self::normalizePriority($priority);
+
+        $status = trim((string) $request->request->get('status', TaskStatus::Waiting->value));
+        $status = self::normalizeStatus($status);
+
+        $startTime = self::parseDateTime($request->request->get('start_time'));
+        $endTime = self::parseDateTime($request->request->get('end_time'));
+
+        $categoryValue = $request->request->get('category');
+        $categoryId = null;
+
+        if (null !== $categoryValue && '' !== $categoryValue) {
+            $categoryId = (int) $categoryValue;
+        }
 
         return new self(
-            title: trim((string) $request->request->get('title')),
-            description: $request->request->get('description'),
-            priority: $request->request->getString('priority', 'medium'),
-            status: $request->request->getString('status', 'waiting'),
-            startTime: self::parseDateTime($request->request->get('start_time'), 'Дата начала'),
-            endTime: self::parseDateTime($request->request->get('end_time'), 'Дата окончания'),
-            categoryId: null !== $categoryId && '' !== $categoryId ? (int) $categoryId : null,
-            parentId: null !== $parentId && '' !== $parentId ? (int) $parentId : null,
+            title: $title,
+            description: '' !== $description ? $description : null,
+            priority: $priority,
+            status: $status,
+            startTime: $startTime,
+            endTime: $endTime,
+            categoryId: $categoryId,
         );
     }
 
-    public static function forSubtask(Request $request, int $parentId): self
+    private static function normalizePriority(string $priority): string
     {
-        $base = self::fromRequest($request);
-
-        return new self(
-            title: $base->title,
-            description: $base->description,
-            priority: $base->priority,
-            status: $base->status,
-            startTime: $base->startTime,
-            endTime: $base->endTime,
-            categoryId: null, // подзадача не имеет своей категории
-            parentId: $parentId,
-        );
+        return match ($priority) {
+            'low' => TaskPriority::Low->value,
+            'medium' => TaskPriority::Medium->value,
+            'high' => TaskPriority::High->value,
+            default => throw new InvalidArgumentException('Некорректный приоритет задачи.'),
+        };
     }
 
-    public function isSubtask(): bool
+    private static function normalizeStatus(string $status): string
     {
-        return null !== $this->parentId;
+        return match ($status) {
+            'waiting' => TaskStatus::Waiting->value,
+            'in_progress', 'inProgress' => TaskStatus::InProgress->value,
+            'completed' => TaskStatus::Completed->value,
+            default => throw new InvalidArgumentException('Некорректный статус задачи.'),
+        };
     }
 
-    private static function parseDateTime(?string $value, string $fieldName): ?\DateTimeImmutable
+    private static function parseDateTime(mixed $value): ?DateTimeImmutable
     {
         if (null === $value || '' === $value) {
             return null;
         }
 
-        $date = \DateTimeImmutable::createFromFormat('Y-m-d\TH:i', $value);
-
-        if (false === $date) {
-            throw new \InvalidArgumentException(sprintf('%s имеет некорректный формат.', $fieldName));
+        try {
+            return new DateTimeImmutable((string) $value);
+        } catch (Throwable) {
+            throw new InvalidArgumentException('Некорректный формат даты.');
         }
-
-        return $date;
     }
 }

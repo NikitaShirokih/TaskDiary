@@ -17,9 +17,9 @@ final readonly class TaskAdvicePromptBuilder implements PromptBuilderInterface
 
     public function build(TaskPromptData $data): string
     {
-        $taskContext = $this->relationTreeRenderer->render($data->root);
+        $taskContext = $this->relationTreeRenderer->render($data->parent);
 
-        return trim(<<<PROMPT
+        return sprintf(<<<PROMPT
 ## Контекст задачи
 
 {$taskContext}

@@ -7,7 +7,7 @@ namespace App\Dto;
 final readonly class TaskPromptData
 {
     public function __construct(
-        public TaskPromptNode $root,
+        public TaskPromptNode $parent,
         public string $instruction,
     ) {
     }

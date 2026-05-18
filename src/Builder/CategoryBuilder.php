@@ -9,14 +9,10 @@ use App\Entity\Category;
 final class CategoryBuilder
 {
     /**
-     * @return array<string, mixed>|null
+     * @return array<string, mixed>|
      */
-    public function build(?Category $category): ?array
+    public function build(Category $category): array
     {
-        if ($category === null) {
-            return null;
-        }
-
         return [
             'id' => $category->getId(),
             'name' => $category->getName(),

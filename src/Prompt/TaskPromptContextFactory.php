@@ -23,7 +23,7 @@ final readonly class TaskPromptContextFactory
         $visited = [];
 
         return new TaskPromptData(
-            root: $this->buildNode(
+            parent: $this->buildNode(
                 task: $task,
                 relationType: TaskRelationType::Root,
                 depth: 0,
@@ -35,40 +35,42 @@ final readonly class TaskPromptContextFactory
 
     /**
      * @param array<int, true> $visited
+     * Собирает дерево узлов.
      */
     private function buildNode(
         Task $task,
         TaskRelationType $relationType,
         int $depth,
         array &$visited,
-    ): TaskPromptNode {
+    ): TaskPromptNode
+    {
         $taskId = $task->getId();
 
-        if (null !== $taskId) {
+        if ($taskId !== null) {
             if (isset($visited[$taskId])) {
-                return $this->createNodeWithoutChildren($task, $relationType);
+                return $this->createNode($task, $relationType);
             }
 
             $visited[$taskId] = true;
         }
 
         if ($depth >= $this->maxDepth) {
-            return $this->createNodeWithoutChildren($task, $relationType);
+            return $this->createNode($task, $relationType);
         }
 
         $relations = $this->collectRelatedTasks($task);
 
         $children = [];
-        $processedCount = 0;
-        $hiddenRelationsCount = 0;
 
-        foreach ($relations as $relation) {
-            if ($processedCount >= $this->maxRelationsPerNode) {
-                ++$hiddenRelationsCount;
-                continue;
-            }
+        $hiddenRelationsCount = count($relations);
 
+
+        for ($i = 0; $i < min(count($relations), $this->maxRelationsPerNode); $i++) {
+
+            $relation = $relations[$i];
             $relatedTask = $relation['task'];
+            $relationType = $relation['type'];
+
             $relatedTaskId = $relatedTask->getId();
 
             if (null !== $relatedTaskId && isset($visited[$relatedTaskId])) {
@@ -77,12 +79,10 @@ final readonly class TaskPromptContextFactory
 
             $children[] = $this->buildNode(
                 task: $relatedTask,
-                relationType: $relation['type'],
+                relationType: $relationType,
                 depth: $depth + 1,
                 visited: $visited,
             );
-
-            ++$processedCount;
         }
 
         return $this->createNode(
@@ -110,9 +110,6 @@ final readonly class TaskPromptContextFactory
         }
 
         foreach ($task->getChildren() as $child) {
-            if (!$child instanceof Task) {
-                continue;
-            }
 
             $relations[] = [
                 'task' => $child,
@@ -129,33 +126,14 @@ final readonly class TaskPromptContextFactory
     private function createNode(
         Task $task,
         TaskRelationType $relationType,
-        array $children,
-        int $hiddenRelationsCount,
+        array $children = [],
+        int $hiddenRelationsCount = 0,
     ): TaskPromptNode {
         return new TaskPromptNode(
-            id: $task->getId(),
-            title: $this->sanitize($task->getTitle()),
-            description: $this->sanitizeNullable($task->getDescription()),
-            status: $this->stringify($task->getStatus()),
-            priority: $this->stringify($task->getPriority()),
-            type: $task->isSubtask() ? 'subtask' : 'task',
-            startTime: $task->getStartTime(),
-            endTime: $task->getEndTime(),
+            Task: $task,
             relationType: $relationType,
             children: $children,
             hiddenRelationsCount: $hiddenRelationsCount,
-        );
-    }
-
-    private function createNodeWithoutChildren(
-        Task $task,
-        TaskRelationType $relationType,
-    ): TaskPromptNode {
-        return $this->createNode(
-            task: $task,
-            relationType: $relationType,
-            children: [],
-            hiddenRelationsCount: 0,
         );
     }
 
