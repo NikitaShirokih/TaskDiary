@@ -9,10 +9,10 @@ use App\Dto\TaskPromptNode;
 final readonly class TaskRelationTreeRenderer
 {
     /**
-     * @param list<FieldRendererInterface> $fieldRenderers
+     * @param iterable<FieldRendererInterface> $fieldRenderers
      */
     public function __construct(
-        private array $fieldRenderers,
+        private iterable $fieldRenderers,
     ) {}
 
     public function render(TaskPromptNode $node): string
@@ -26,7 +26,7 @@ final readonly class TaskRelationTreeRenderer
 
         $lines = [];
 
-        $lines[] = sprintf('%s- [%s] %s', $indent, $node->relationType->label(), $node->task->getTitle(),);
+        $lines[] = sprintf('%s- [%s] %s', $indent, $node->relationType->label(), $node->task->getTitle());
 
         foreach ($this->renderDetails($node, $indent) as $detailLine) {
             $lines[] = $detailLine;
