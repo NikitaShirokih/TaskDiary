@@ -1,0 +1,43 @@
+services:
+    - type: web
+      name: taskdiary
+      runtime: php
+      plan: free
+      region: frankfurt
+      phpVersion: "8.3"
+      buildCommand: |
+          composer install --no-dev --optimize-autoloader --no-scripts
+          php bin/console assets:install --env=prod
+          php bin/console importmap:install --env=prod
+          php bin/console cache:clear --env=prod
+          php bin/console cache:warmup --env=prod
+      postDeployCommand: |
+          php bin/console doctrine:migrations:migrate --no-interaction --env=prod
+      envVars:
+          - key: APP_ENV
+            value: prod
+          - key: APP_DEBUG
+            value: "false"
+          - key: APP_SECRET
+            generateValue: true
+          - key: DATABASE_URL
+            fromDatabase:
+                name: taskdiary-db
+                property: connectionString
+          - key: MAILER_DSN
+            value: "null://null"
+          - key: MESSENGER_TRANSPORT_DSN
+            value: "doctrine://default?auto_setup=0"
+          - key: MERCURE_PUBLISH_URL
+            value: "http://localhost:3000/.well-known/mercure"
+          - key: MERCURE_JWT_SECRET
+            generateValue: true
+          - key: GIGACHAT_API_KEY
+            sync: false
+
+databases:
+    - name: taskdiary-db
+      plan: free
+      region: frankfurt
+      databaseName: taskdiary
+      user: taskdiary_user

@@ -63,8 +63,11 @@ init: ## Первый запуск проекта с нуля
 	else \
 		echo "$(YELLOW)nginx/default.conf уже существует — пропускаем$(NC)"; \
 	fi
+
 	@echo "$(YELLOW)Собираем контейнеры...$(NC)"
 	@$(COMPOSE) up -d --build
+	@echo "$(YELLOW)Перезапускаем nginx для обновления DNS...$(NC)"
+	@$(COMPOSE) restart nginx
 	@echo "$(YELLOW)Устанавливаем зависимости...$(NC)"
 	@$(PHP) composer install
 	@echo "$(YELLOW)Создаём базу данных...$(NC)"
@@ -90,10 +93,17 @@ stop: ## Остановить проект
 
 restart: stop start ## Перезапустить проект
 
+build: ## Собрать образы без запуска
+	@echo "$(YELLOW)Собираем образы...$(NC)"
+	@$(COMPOSE) build
+	@echo "$(GREEN)✅ Образы собраны$(NC)"
+
 rebuild: ## Пересобрать контейнеры и переустановить зависимости
 	@echo "$(YELLOW)Пересобираем контейнеры...$(NC)"
 	@$(COMPOSE) down
 	@$(COMPOSE) up -d --build
+	@echo "$(YELLOW)Перезапускаем nginx для обновления DNS...$(NC)"
+	@$(COMPOSE) restart nginx
 	@$(PHP) composer install
 	@echo "$(GREEN)✅ Контейнеры пересобраны$(NC)"
 
@@ -134,6 +144,8 @@ reset: stop ## Полный сброс проекта (контейнеры + vo
 	@echo "$(RED)Полный сброс проекта...$(NC)"
 	@$(COMPOSE) down -v
 	@$(COMPOSE) up -d --build
+	@echo "$(YELLOW)Перезапускаем nginx для обновления DNS...$(NC)"
+	@$(COMPOSE) restart nginx
 	@$(PHP) composer install
 	@$(CONSOLE) doctrine:database:create --if-not-exists
 	@$(CONSOLE) doctrine:migrations:migrate --no-interaction
@@ -185,6 +197,7 @@ lint: cs-fix stan test ## Исправить стиль + анализ + тес�
 prod-deploy: ## Production deploy
 	@echo "$(YELLOW)Запускаем production deploy...$(NC)"
 	@$(COMPOSE) up -d --build
+	@$(COMPOSE) restart nginx
 	@$(PHP) composer install --no-dev --optimize-autoloader
 	@$(CONSOLE) doctrine:migrations:migrate --no-interaction
 	@$(CONSOLE) cache:clear --env=prod
@@ -198,7 +211,7 @@ logs: ## Показать логи контейнеров
 
 php-shell: ## Войти в PHP-контейнер
 	@echo "$(YELLOW)Подключаемся к PHP-контейнеру...$(NC)"
-	@$(COMPOSE) exec php bash
+	@$(COMPOSE) exec php sh
 
 # Предотвращаем ошибки с аргументами
 %:
