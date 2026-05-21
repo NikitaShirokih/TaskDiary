@@ -312,5 +312,20 @@ class TaskRepository extends ServiceEntityRepository
             'completed' => $completedQb->getQuery()->getArrayResult(),
         ];
     }
+    /**
+     * @return Task[]
+     */
+    public function findTaskWithDescendantsForExport(int $id): array
+    {
+        return $this->createQueryBuilder('t')
+            ->leftJoin('t.parent', 'p')
+            ->addSelect('p')
+            ->andWhere('t.id = :id OR p.id = :id')
+            ->setParameter('id', $id)
+            ->orderBy('t.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
+
 
 }

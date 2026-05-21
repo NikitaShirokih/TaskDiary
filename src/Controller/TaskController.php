@@ -284,7 +284,7 @@ final class TaskController extends AbstractController
         return $this->redirectToRoute('task_list');
     }
 
-    #[Route('/{id<\d+>}/ai-analyze', name: 'ai_analyze', methods: ['POST'])]
+    #[Route('/{id<\d+>}/ai-analyze', name: 'ai_analyze', methods: ['GET', 'POST'])]
     public function aiAnalyze(Task $task, AiService $aiService): JsonResponse
     {
         $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
@@ -311,7 +311,7 @@ final class TaskController extends AbstractController
         $tasks = $this->taskService->getTaskWithDescendantsForExport($id);
 
         return new JsonResponse(
-            $exportService->exportTask($task, $tasks),
+            $exportService->exportTasks($task, $tasks),
             Response::HTTP_OK,
             ['Content-Disposition' => 'attachment; filename="task_'.$id.'.json"']
         );
