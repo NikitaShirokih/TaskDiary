@@ -1,39 +1,37 @@
-FROM php:8.3-fpm
+FROM php:8.3-fpm-alpine
 
-RUN apt-get update && apt-get install -y \
+RUN echo "https://mirror.yandex.ru/mirrors/alpine/v3.23/main" > /etc/apk/repositories && \
+    echo "https://mirror.yandex.ru/mirrors/alpine/v3.23/community" >> /etc/apk/repositories && \
+    apk add --no-cache \
     git \
     curl \
     libpng-dev \
-    libonig-dev \
+    oniguruma-dev \
     libxml2-dev \
     libzip-dev \
+    libpq-dev \
     zip \
     unzip \
-    default-mysql-client \
-    && rm -rf /var/lib/apt/lists/*
+    postgresql-client
 
 RUN docker-php-ext-install \
-    pdo_mysql \
-    mysqli \
+    pdo_pgsql \
+    pgsql \
     mbstring \
     exif \
     pcntl \
     bcmath \
     gd \
     zip \
-    sockets \
     xml
 
-RUN docker-php-ext-enable \
-    pdo_mysql \
-    mysqli \
-    opcache
+RUN docker-php-ext-enable pdo_pgsql opcache
 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 RUN chmod +x /usr/bin/composer
 
-RUN groupadd -g 1000 www
-RUN useradd -u 1000 -ms /bin/bash -g www www
+RUN addgroup -g 1000 www && \
+    adduser -u 1000 -G www -s /bin/sh -D www
 
 WORKDIR /var/www/html
 

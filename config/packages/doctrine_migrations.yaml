@@ -1,18 +1,4 @@
 doctrine_migrations:
     migrations_paths:
-        # namespace is arbitrary but should be different from App\Migrations
-        # as migrations classes should NOT be autoloaded
         'DoctrineMigrations': '%kernel.project_dir%/migrations'
     enable_profiler: false
-
-services:
-    - type: web
-        ...
-      buildCommand: |
-          composer install --no-dev --optimize-autoloader --no-scripts
-          php bin/console assets:install --env=prod
-          php bin/console importmap:install --env=prod
-          php bin/console cache:clear --env=prod
-          php bin/console cache:warmup --env=prod
-      postDeployCommand: |
-          php bin/console doctrine:migrations:migrate --no-interaction --env=prod
