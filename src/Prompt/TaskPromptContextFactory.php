@@ -130,7 +130,7 @@ final readonly class TaskPromptContextFactory
         int $hiddenRelationsCount = 0,
     ): TaskPromptNode {
         return new TaskPromptNode(
-            Task: $task,
+            task: $task,
             relationType: $relationType,
             children: $children,
             hiddenRelationsCount: $hiddenRelationsCount,

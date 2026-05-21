@@ -14,6 +14,8 @@ class StartTimeRenderer implements FieldRendererInterface
         if ($node->task->getStartTime() === null) {
             return null;
         }
-        return sprintf('%s  Начало: %s', $indent, $node->task->getStartTime());
+
+        return sprintf('%s  Начало: %s', $indent, $node->task->getStartTime()->format('Y-m-d H:i:s'),
+        );
     }
 }
