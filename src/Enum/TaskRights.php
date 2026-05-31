@@ -6,6 +6,7 @@ namespace App\Enum;
 
 enum TaskRights: string
 {
-    case OWNER = 'TASK_OWNER';
-    case ADMIN = 'TASK_ADMIN';
+    case VIEW = 'TASK_VIEW';
+    case EDIT = 'TASK_EDIT';
+    case DELETE = 'TASK_DELETE';
 }
