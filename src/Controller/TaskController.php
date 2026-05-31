@@ -6,16 +6,20 @@ namespace App\Controller;
 
 use App\Dto\TaskData;
 use App\Entity\Task;
+use App\Entity\TaskComment;
 use App\Entity\User;
 use App\Enum\TaskRights;
 use App\Enum\TaskStatus;
 use App\Enum\ToneAi;
+use App\Enum\UserRole;
 use App\Exception\TaskNotFoundException;
 use App\Repository\CategoryRepository;
 use App\Repository\TaskRepository;
 use App\Service\AiService;
 use App\Service\TaskExportService;
 use App\Service\TaskService;
+use App\Form\TaskCommentFormType;
+use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 use LogicException;
 use RuntimeException;
@@ -28,7 +32,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Throwable;
 
-#[IsGranted('ROLE_USER')]
+#[IsGranted(UserRole::USER->value)]
 #[Route('/task', name: 'task_')]
 final class TaskController extends AbstractController
 {
@@ -37,6 +41,7 @@ final class TaskController extends AbstractController
         private readonly TaskRepository $taskRepository,
         private readonly CategoryRepository $categoryRepository,
         private readonly ValidatorInterface $validator,
+        private readonly EntityManagerInterface $entityManager,
     ) {
     }
 
@@ -56,6 +61,32 @@ final class TaskController extends AbstractController
             'tasks' => $tasks,
             'categories' => $this->categoryRepository->findAll(),
         ]);
+    }
+
+    #[Route('/{id<\d+>}/comment', name: 'comment_create', methods: ['POST'])]
+    #[IsGranted(UserRole::ADMIN->value)]
+    public function addComment(Task $task, Request $request): Response
+    {
+        $comment = new TaskComment();
+        $form = $this->createForm(TaskCommentFormType::class, $comment);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $user = $this->getUser();
+
+            if (!$user instanceof User) {
+                throw $this->createAccessDeniedException();
+            }
+
+            $comment->setTask($task);
+            $comment->setAuthor($user);
+
+            $this->entityManager->persist($comment);
+            $this->entityManager->flush();
+
+            $this->addFlash('success', 'Коментарий добавлен.');
+        }
+        return $this->redirectToRoute('task_show', ['id' => $task->getId()]);
     }
 
     #[Route('/ajax/list', name: 'ajax_list', methods: ['GET'])]
@@ -139,7 +170,7 @@ final class TaskController extends AbstractController
     {
         $parent = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $parent);
+        $this->denyAccessUnlessGranted(TaskRights::EDIT->value, $parent);
 
         return $this->render('task/create.html.twig', [
             'categories' => $this->categoryRepository->findAll(),
@@ -153,7 +184,7 @@ final class TaskController extends AbstractController
     {
         $parent = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $parent);
+        $this->denyAccessUnlessGranted(TaskRights::EDIT->value, $parent);
 
         if (!$this->isCsrfTokenValid('subtask_create', (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
@@ -177,19 +208,30 @@ final class TaskController extends AbstractController
     {
         $task = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
+        $this->denyAccessUnlessGranted(TaskRights::VIEW->value, $task);
+
+        $commentForm = null;
+
+        if ($this->isGranted(UserRole::ADMIN->value)) {
+            $commentForm = $this->createForm(TaskCommentFormType::class, new TaskComment(), [
+                'action' => $this->generateUrl('task_comment_create', ['id' => $task->getId()]),
+                'method' => 'POST',
+            ])->createView();
+        }
 
         return $this->render('task/show.html.twig', [
             'task' => $task,
+            'commentForm' => $commentForm,
         ]);
     }
+
 
     #[Route('/{id<\d+>}/edit', name: 'edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, int $id): Response
     {
         $task = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
+        $this->denyAccessUnlessGranted(TaskRights::EDIT->value, $task);
 
         if (!$request->isMethod('POST')) {
             return $this->render('task/edit.html.twig', [
@@ -221,7 +263,7 @@ final class TaskController extends AbstractController
     {
         $task = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
+        $this->denyAccessUnlessGranted(TaskRights::EDIT->value, $task);
 
         if (!$this->isCsrfTokenValid('task_status_'.$id, (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
@@ -268,7 +310,7 @@ final class TaskController extends AbstractController
     {
         $task = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
+        $this->denyAccessUnlessGranted(TaskRights::DELETE->value, $task);
 
         if (!$this->isCsrfTokenValid('task-delete-'.$id, (string) $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
@@ -287,7 +329,7 @@ final class TaskController extends AbstractController
     #[Route('/{id<\d+>}/ai-analyze', name: 'ai_analyze', methods: ['GET', 'POST'])]
     public function aiAnalyze(Task $task, AiService $aiService): JsonResponse
     {
-        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
+        $this->denyAccessUnlessGranted(TaskRights::VIEW->value, $task);
 
         try {
             $result = $aiService->analyzeTask($task);
@@ -306,7 +348,7 @@ final class TaskController extends AbstractController
     {
         $task = $this->taskService->getTaskById($id);
 
-        $this->denyAccessUnlessGranted(TaskRights::OWNER->value, $task);
+        $this->denyAccessUnlessGranted(TaskRights::VIEW->value, $task);
 
         $tasks = $this->taskService->getTaskWithDescendantsForExport($id);
 
