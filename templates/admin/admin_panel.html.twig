@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Админка | Task Diary{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1">Админ-панель</h1>
+            <p class="text-muted mb-0">Управление системой Task Diary</p>
+        </div>
+        <span class="badge bg-primary fs-6 px-3 py-2">ROLE_ADMIN</span>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-md-6 col-xl-4">
+            <div class="card shadow-sm border-0 h-100 rounded-4">
+                <div class="card-body">
+                    <h2 class="h5 fw-semibold mb-3">Все задачи</h2>
+                    <p class="text-muted mb-4">
+                        Просмотр полного списка задач всех пользователей.
+                    </p>
+                    <a href="{{ path('admin_tasks') }}" class="btn btn-outline-primary rounded-3">
+                        Открыть
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-xl-4">
+            <div class="card shadow-sm border-0 h-100 rounded-4">
+                <div class="card-body">
+                    <h2 class="h5 fw-semibold mb-3">Все пользователи</h2>
+                    <p class="text-muted mb-4">
+                        Просмотр зарегистрированных пользователей системы.
+                    </p>
+                    <a href="{{ path('admin_users') }}" class="btn btn-outline-primary rounded-3">
+                        Открыть
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
