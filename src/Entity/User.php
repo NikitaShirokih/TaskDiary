@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Enum\UserRole;
 use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -65,17 +66,41 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getRoles(): array
     {
         $roles = $this->roles;
-        $roles[] = 'ROLE_USER';
+        $roles[] = UserRole::USER->value;
 
-        return array_unique($roles);
+        return array_values(array_unique($roles));
     }
 
     /** @param array<int, string> $roles */
     public function setRoles(array $roles): static
     {
-        $this->roles = $roles;
+        $this->roles = array_values(array_unique($roles));
 
         return $this;
+    }
+
+    public function addRole(UserRole $role): static
+    {
+        if (!in_array($role->value, $this->roles, true)) {
+            $this->roles[] = $role->value;
+        }
+
+        return $this;
+    }
+
+    public function removeRole(UserRole $role): static
+    {
+        $this->roles = array_values(array_filter(
+            $this->roles,
+            static fn(string $existingRole): bool => $existingRole !== $role->value
+        ));
+
+        return $this;
+    }
+
+    public function hasRole(UserRole $role): bool
+    {
+        return in_array($role->value, $this->getRoles(), true);
     }
 
     public function getPassword(): ?string
@@ -92,7 +117,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
-        // Очищаем временные чувствительные данные, если они есть.
     }
 
     /** @return Collection<int, Task> */
@@ -105,6 +129,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->tasks->contains($task)) {
             $this->tasks->add($task);
+            $task->setUser($this);
         }
 
         return $this;
@@ -112,7 +137,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function removeTask(Task $task): static
     {
-        $this->tasks->removeElement($task);
+        if ($this->tasks->removeElement($task)) {
+            if ($task->getUser() === $this) {
+                $task->setUser(null);
+            }
+        }
 
         return $this;
     }

@@ -56,6 +56,10 @@ class Task
     #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
     private ?Task $parent = null;
 
+    #[ORM\OneToMany(mappedBy: 'task', targetEntity: TaskComment::class, orphanRemoval: true)]
+    private Collection $comments;
+
+
     /** @var Collection<int, Task> */
     #[ORM\OneToMany(targetEntity: self::class, mappedBy: 'parent', cascade: ['persist', 'remove'])]
     private Collection $children;
@@ -93,6 +97,7 @@ class Task
 
     private function __construct()
     {
+        $this->comments = new ArrayCollection();
     }
 
     public function rename(string $title): void
@@ -234,5 +239,28 @@ class Task
         return null !== $this->endTime
             && $this->endTime < new \DateTimeImmutable()
             && !$this->isCompleted();
+    }
+
+    public function getComments(): Collection
+    {
+        return $this->comments;
+    }
+
+    public function addComment(TaskComment $comment): self
+    {
+        if (!$this->comments->contains($comment)) {
+            $this->comments->add($comment);
+            $comment->setTask($this);
+        }
+        return $this;
+    }
+    public function removeComment(TaskComment $comment): self
+    {
+        if ($this->comments->removeElement($comment)) {
+            if ($comment->getTask() === $this) {
+                $comment->setTask(null);
+            }
+        }
+        return $this;
     }
 }
