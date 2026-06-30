@@ -12,7 +12,8 @@ services:
         resource: '../src/'
         exclude:
             - '../src/DependencyInjection/'
-            - '../src/Entity/'
+            - '../src/Common/Entity/'
+            - '../src/Module/*/Entity/'
             - '../src/Kernel.php'
 
     App\Module\Ai\Contract\PromptBuilderInterface:

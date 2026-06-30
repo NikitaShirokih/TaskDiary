@@ -6,7 +6,7 @@ namespace App\Module\Task\Controller;
 
 use App\Module\Task\Enum\TaskRights;
 use App\Module\Task\Enum\TaskStatus;
-use App\Module\User\Enum\UserRole;
+use App\Module\Main\Enum\UserRole;
 use App\Module\Task\Exception\TaskNotFoundException;
 use App\Module\Task\Service\TaskService;
 use InvalidArgumentException;

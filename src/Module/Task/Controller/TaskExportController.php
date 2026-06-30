@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Module\Task\Controller;
 
 use App\Module\Task\Enum\TaskRights;
-use App\Module\User\Enum\UserRole;
-use App\Module\Task\Query\TaskExportQueryService;
+use App\Module\Main\Enum\UserRole;
+use App\Module\Task\Service\TaskExportQueryService;
 use App\Module\Task\Service\TaskExportService;
 use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;

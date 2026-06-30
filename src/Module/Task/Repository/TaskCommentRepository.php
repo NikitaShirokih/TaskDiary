@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Repository;
 
-use App\Entity\TaskComment;
+use App\Module\Task\Entity\TaskComment;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

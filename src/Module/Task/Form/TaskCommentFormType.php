@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Form;
 
-use App\Entity\TaskComment;
+use App\Module\Task\Entity\TaskComment;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Service;
 
-use App\Entity\Task;
+use App\Module\Task\Entity\Task;
 
 class TaskExportService
 {

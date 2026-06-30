@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Repository;
 
-use App\Entity\Task;
-use App\Entity\User;
-use App\Module\Dashboard\Query\DashboardStatsQueryService;
+use App\Module\Task\Entity\Task;
+use App\Module\Main\Entity\User;
+use App\Module\Task\Service\DashboardStatsQueryService;
 use App\Module\Task\Enum\TaskPriority;
 use App\Module\Task\Enum\TaskStatus;
 use Doctrine\ORM\EntityManagerInterface;
@@ -27,8 +27,8 @@ final class TaskRepositoryTest extends KernelTestCase
         $this->em = $container->get(EntityManagerInterface::class);
         $this->dashboardStatsQueryService = $container->get(DashboardStatsQueryService::class);
 
-        $this->em->createQuery('DELETE FROM App\Entity\Task t')->execute();
-        $this->em->createQuery('DELETE FROM App\Entity\User u')->execute();
+        $this->em->createQuery('DELETE FROM App\Module\Task\Entity\Task t')->execute();
+        $this->em->createQuery('DELETE FROM App\Module\Main\Entity\User u')->execute();
 
         $this->em->clear();
     }

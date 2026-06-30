@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Controller;
 
-use App\Entity\Task;
+use App\Module\Task\Entity\Task;
 use App\Module\Task\Enum\TaskRights;
 use App\Module\Ai\Enum\ToneAi;
-use App\Module\User\Enum\UserRole;
+use App\Module\Main\Enum\UserRole;
 use App\Module\Ai\Service\AiService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;

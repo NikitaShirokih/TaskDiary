@@ -2,7 +2,7 @@
 
 namespace App\Tests\E2E;
 
-use App\Entity\User;
+use App\Module\Main\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Panther\PantherTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;

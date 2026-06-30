@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Module\Task\Controller;
 
 use App\Module\Task\Enum\TaskRights;
-use App\Module\User\Enum\UserRole;
+use App\Module\Main\Enum\UserRole;
 use App\Module\Task\Exception\TaskNotFoundException;
 use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;

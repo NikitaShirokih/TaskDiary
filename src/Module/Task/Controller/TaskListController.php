@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Controller;
 
-use App\Module\User\Enum\UserRole;
-use App\Module\Task\Query\TaskListQueryService;
-use App\Module\Task\Service\AuthenticatedUserProvider;
+use App\Module\Main\Enum\UserRole;
+use App\Module\Task\Service\TaskListQueryService;
+use App\Module\Main\Service\AuthenticatedUserProvider;
 use App\Module\Task\Service\TaskFilterRequestFactory;
-use App\Module\Category\Repository\CategoryRepository;
+use App\Module\Task\Repository\CategoryRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

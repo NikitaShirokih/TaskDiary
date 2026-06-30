@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Module\Task\Service;
 
 use App\Module\Task\Dto\TaskData;
-use App\Entity\Category;
-use App\Entity\Task;
-use App\Entity\User;
+use App\Module\Task\Entity\Category;
+use App\Module\Task\Entity\Task;
+use App\Module\Main\Entity\User;
 use App\Module\Task\Enum\TaskPriority;
 use App\Module\Task\Enum\TaskStatus;
 use App\Module\Task\Exception\TaskNotFoundException;
-use App\Module\Category\Repository\CategoryRepository;
+use App\Module\Task\Repository\CategoryRepository;
 use App\Module\Task\Repository\TaskRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;

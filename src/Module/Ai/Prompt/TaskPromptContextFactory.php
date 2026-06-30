@@ -6,7 +6,7 @@ namespace App\Module\Ai\Prompt;
 
 use App\Module\Task\Dto\TaskPromptData;
 use App\Module\Task\Dto\TaskPromptNode;
-use App\Entity\Task;
+use App\Module\Task\Entity\Task;
 use App\Module\Task\Enum\TaskRelationType;
 
 final readonly class TaskPromptContextFactory

@@ -6,9 +6,9 @@ namespace App\Module\Task\Controller;
 
 use App\Module\Task\Dto\TaskData;
 use App\Module\Task\Enum\TaskRights;
-use App\Module\User\Enum\UserRole;
+use App\Module\Main\Enum\UserRole;
 use App\Module\Task\Service\TaskFormHandler;
-use App\Module\Category\Repository\CategoryRepository;
+use App\Module\Task\Repository\CategoryRepository;
 use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;

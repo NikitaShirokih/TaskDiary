@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Security\Voter;
 
-use App\Entity\Task;
-use App\Entity\User;
+use App\Module\Task\Entity\Task;
+use App\Module\Main\Entity\User;
 use App\Module\Task\Enum\TaskRights;
-use App\Module\User\Enum\UserRole;
+use App\Module\Main\Enum\UserRole;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Authorization\Voter\Voter;

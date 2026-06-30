@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Controller;
 
-use App\Entity\Task;
-use App\Entity\TaskComment;
-use App\Module\User\Enum\UserRole;
+use App\Module\Task\Entity\Task;
+use App\Module\Task\Entity\TaskComment;
+use App\Module\Main\Enum\UserRole;
 use App\Module\Task\Form\TaskCommentFormType;
-use App\Module\Task\Service\AuthenticatedUserProvider;
+use App\Module\Main\Service\AuthenticatedUserProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;

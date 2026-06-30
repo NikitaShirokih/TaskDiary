@@ -6,7 +6,7 @@ namespace App\Module\Ai\Service;
 
 use App\Module\Ai\Builder\PromptBuilder;
 use App\Module\Ai\Contract\PromptBuilderInterface;
-use App\Entity\Task;
+use App\Module\Task\Entity\Task;
 use App\Module\Ai\Enum\ToneAi;
 use App\Module\Ai\Prompt\TaskPromptContextFactory;
 use RuntimeException;
