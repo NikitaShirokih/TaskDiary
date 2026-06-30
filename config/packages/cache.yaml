@@ -8,7 +8,10 @@ framework:
                 provider: '%env(REDIS_DSN)%'
                 default_lifetime: 600
 
-            category.cache:
-                adapter: cache.adapter.redis
-                provider: '%env(REDIS_DSN)%'
-                default_lifetime: 3600
+when@test:
+    framework:
+        cache:
+            pools:
+                dashboard.cache:
+                    adapter: cache.adapter.array
+                    provider: null

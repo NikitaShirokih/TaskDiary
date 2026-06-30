@@ -17,6 +17,7 @@ use App\Module\Task\Service\TaskService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final class TaskServiceTest extends TestCase
 {
@@ -25,6 +26,7 @@ final class TaskServiceTest extends TestCase
         ?Security               $security = null,
         ?CategoryRepository     $categoryRepository = null,
         ?TaskRepository         $taskRepository = null,
+        ?EventDispatcherInterface $eventDispatcher = null,
     ): TaskService
     {
         return new TaskService(
@@ -32,6 +34,7 @@ final class TaskServiceTest extends TestCase
             $categoryRepository ?? $this->makeCategoryRepositoryWithDefaultCategory(),
             $taskRepository ?? $this->createStub(TaskRepository::class),
             $security ?? $this->createStub(Security::class),
+            $eventDispatcher ?? $this->createStub(EventDispatcherInterface::class),
         );
     }
 
@@ -68,11 +71,19 @@ final class TaskServiceTest extends TestCase
 
     private function makeSecurityWithUser(): Security
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user);
 
         return $security;
+    }
+
+    private function makeUser(): User
+    {
+        $user = $this->createStub(User::class);
+        $user->method('getId')->willReturn(1);
+
+        return $user;
     }
 
     public function testAddTaskPersistsTaskWithCorrectTitle(): void
@@ -160,7 +171,7 @@ final class TaskServiceTest extends TestCase
 
     public function testAddSubtaskPersistsSubtaskWithParent(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user);
 
@@ -207,7 +218,7 @@ final class TaskServiceTest extends TestCase
 
     public function testAddSubtaskTrimsTitleWhitespace(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user);
 
@@ -235,7 +246,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateTaskRenamesTask(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Старый заголовок');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -256,7 +267,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateTaskChangesPriority(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача', priority: TaskPriority::Low);
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -295,7 +306,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateStatusSetsInProgress(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -316,7 +327,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateStatusSetsCompleted(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -338,7 +349,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateStatusReopensTask(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
         $task->start();
 
@@ -360,7 +371,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateStatusThrowsOnInvalidStatus(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -381,7 +392,7 @@ final class TaskServiceTest extends TestCase
 
     public function testDeleteTaskCallsRemoveAndFlush(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -422,7 +433,7 @@ final class TaskServiceTest extends TestCase
 
     public function testGetTaskByIdReturnsTask(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createMock(TaskRepository::class);

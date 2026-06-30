@@ -7,6 +7,7 @@ namespace App\Module\Task\Service;
 use App\Module\Task\Dto\TaskData;
 use App\Module\Task\Entity\Category;
 use App\Module\Task\Entity\Task;
+use App\Module\Task\Event\TaskChangedEvent;
 use App\Module\Main\Entity\User;
 use App\Module\Task\Enum\TaskPriority;
 use App\Module\Task\Enum\TaskStatus;
@@ -18,6 +19,7 @@ use InvalidArgumentException;
 use RuntimeException;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final class TaskService
 {
@@ -26,6 +28,7 @@ final class TaskService
         private readonly CategoryRepository $categoryRepository,
         private readonly TaskRepository $taskRepository,
         private readonly Security $security,
+        private readonly EventDispatcherInterface $eventDispatcher,
     ) {
     }
 
@@ -50,6 +53,8 @@ final class TaskService
 
         $this->entityManager->persist($task);
         $this->entityManager->flush();
+
+        $this->dispatchTaskChangedForUser($user);
     }
 
     public function addSubtask(int $parentId, TaskData $data): void
@@ -81,11 +86,14 @@ final class TaskService
 
         $this->entityManager->persist($subtask);
         $this->entityManager->flush();
+
+        $this->dispatchTaskChangedForUser($user);
     }
 
     public function updateTask(int $id, TaskData $data): void
     {
         $task = $this->getTaskById($id);
+        $user = $task->getUser();
 
         $priority = $this->resolvePriority($data->priority);
         $status = $this->resolveStatus($data->status);
@@ -109,24 +117,32 @@ final class TaskService
         }
 
         $this->entityManager->flush();
+
+        $this->dispatchTaskChangedForUser($user);
     }
 
     public function updateStatus(int $id, ?string $status): void
     {
         $task = $this->getTaskById($id);
+        $user = $task->getUser();
         $taskStatus = $this->resolveStatus((string) $status);
 
         $this->applyStatus($task, $taskStatus);
 
         $this->entityManager->flush();
+
+        $this->dispatchTaskChangedForUser($user);
     }
 
     public function deleteTask(int $id): void
     {
         $task = $this->getTaskById($id);
+        $user = $task->getUser();
 
         $this->entityManager->remove($task);
         $this->entityManager->flush();
+
+        $this->dispatchTaskChangedForUser($user);
     }
 
     public function getTaskById(int $id): Task
@@ -144,6 +160,17 @@ final class TaskService
         }
 
         return $user;
+    }
+
+    private function dispatchTaskChangedForUser(User $user): void
+    {
+        $userId = $user->getId();
+
+        if ($userId === null) {
+            throw new \LogicException('Task owner must have an id.');
+        }
+
+        $this->eventDispatcher->dispatch(new TaskChangedEvent($userId));
     }
 
     private function resolveRequiredCategory(?int $categoryId): Category

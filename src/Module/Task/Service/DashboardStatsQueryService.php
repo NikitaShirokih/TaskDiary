@@ -8,11 +8,14 @@ use App\Module\Task\Entity\Task;
 use App\Module\Main\Entity\User;
 use App\Module\Task\Enum\TaskStatus;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Contracts\Cache\CacheInterface;
+use Symfony\Contracts\Cache\ItemInterface;
 
 final readonly class DashboardStatsQueryService
 {
     public function __construct(
         private EntityManagerInterface $entityManager,
+        private CacheInterface $dashboardCache,
     ) {
     }
 
@@ -36,6 +39,34 @@ final readonly class DashboardStatsQueryService
      * @return array{activeTasks: int, dueTodayTasks: int, dueThisWeekTasks: int}
      */
     public function getStats(User $user): array
+    {
+        $stats = $this->dashboardCache->get(
+            $this->getDashboardCacheKey($user),
+            function (ItemInterface $item) use ($user): array {
+                $item->expiresAfter(600);
+
+                return $this->buildStats($user);
+            }
+        );
+
+        return $stats;
+    }
+
+    private function getDashboardCacheKey(User $user): string
+    {
+        $userId = $user->getId();
+
+        if (null === $userId) {
+            throw new \LogicException('Authenticated user must have an id.');
+        }
+
+        return sprintf('dashboard_stats_user_%d', $userId);
+    }
+
+    /**
+     * @return array{activeTasks: int, dueTodayTasks: int, dueThisWeekTasks: int}
+     */
+    private function buildStats(User $user): array
     {
         return [
             'activeTasks' => $this->countActive($user),

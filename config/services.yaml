@@ -31,3 +31,11 @@ services:
     App\Module\Ai\Prompt\TaskRelationTreeRenderer:
         arguments:
             $fieldRenderers: !tagged_iterator app.field_renderer
+
+    App\Module\Task\Service\DashboardStatsQueryService:
+        arguments:
+            $dashboardCache: '@dashboard.cache'
+
+    App\Module\Task\Service\TaskCacheInvalidator:
+        arguments:
+            $dashboardCache: '@dashboard.cache'
