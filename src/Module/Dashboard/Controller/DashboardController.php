@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Module\Dashboard\Controller;
 
 use App\Entity\User;
-use App\Module\Task\Repository\TaskRepository;
+use App\Module\Dashboard\Query\DashboardStatsQueryService;
+use App\Module\Task\Query\TaskAnalyticsQueryService;
+use App\Module\Task\Query\TaskCalendarQueryService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -15,7 +17,9 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class DashboardController extends AbstractController
 {
     public function __construct(
-        private readonly TaskRepository $taskRepository,
+        private readonly DashboardStatsQueryService $dashboardStatsQueryService,
+        private readonly TaskAnalyticsQueryService $taskAnalyticsQueryService,
+        private readonly TaskCalendarQueryService $taskCalendarQueryService,
     ) {
     }
 
@@ -24,19 +28,11 @@ final class DashboardController extends AbstractController
     {
         $user = $this->getAuthenticatedUser();
 
-        $latestTasks = $this->taskRepository->findBy(
-            ['user' => $user],
-            ['id' => 'DESC'],
-            5
-        );
+        $latestTasks = $this->dashboardStatsQueryService->getLatestTasks($user);
 
-        $chartData = $this->taskRepository->getCategoryChartData($user);
+        $chartData = $this->taskAnalyticsQueryService->getCategoryChartData($user);
 
-        $stats = [
-            'activeTasks' => $this->taskRepository->countActive($user),
-            'dueTodayTasks' => $this->taskRepository->countDueToday($user),
-            'dueThisWeekTasks' => $this->taskRepository->countDueThisWeek($user),
-        ];
+        $stats = $this->dashboardStatsQueryService->getStats($user);
 
         $categoryChart = [
             'labels' => array_column($chartData, 'name'),
@@ -44,7 +40,7 @@ final class DashboardController extends AbstractController
             'colors' => array_column($chartData, 'color'),
         ];
 
-        $calendarEvents = $this->taskRepository->getCalendarEvents($user);
+        $calendarEvents = $this->taskCalendarQueryService->getCalendarEvents($user);
 
         foreach ($calendarEvents as &$event) {
             $event['url'] = $this->generateUrl('task_list');

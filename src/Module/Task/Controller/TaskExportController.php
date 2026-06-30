@@ -6,6 +6,7 @@ namespace App\Module\Task\Controller;
 
 use App\Module\Task\Enum\TaskRights;
 use App\Module\User\Enum\UserRole;
+use App\Module\Task\Query\TaskExportQueryService;
 use App\Module\Task\Service\TaskExportService;
 use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -20,6 +21,7 @@ final class TaskExportController extends AbstractController
 {
     public function __construct(
         private readonly TaskService $taskService,
+        private readonly TaskExportQueryService $taskExportQueryService,
     ) {
     }
 
@@ -30,7 +32,7 @@ final class TaskExportController extends AbstractController
 
         $this->denyAccessUnlessGranted(TaskRights::VIEW->value, $task);
 
-        $tasks = $this->taskService->getTaskWithDescendantsForExport($id);
+        $tasks = $this->taskExportQueryService->findTaskWithDescendantsForExport($id);
 
         return new JsonResponse(
             $exportService->exportTasks($task, $tasks),

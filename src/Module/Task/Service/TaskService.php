@@ -135,14 +135,6 @@ final class TaskService
             ?? throw new TaskNotFoundException(sprintf('Задача #%d не найдена.', $id));
     }
 
-    /**
-     * @return array<int, Task>
-     */
-    public function getTaskWithDescendantsForExport(int $id): array
-    {
-        return $this->taskRepository->findTaskWithDescendantsForExport($id);
-    }
-
     private function getAuthenticatedUser(): User
     {
         $user = $this->security->getUser();

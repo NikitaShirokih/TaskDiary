@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Module\Task\Controller;
 
 use App\Module\User\Enum\UserRole;
+use App\Module\Task\Query\TaskListQueryService;
 use App\Module\Task\Service\AuthenticatedUserProvider;
 use App\Module\Task\Service\TaskFilterRequestFactory;
 use App\Module\Category\Repository\CategoryRepository;
-use App\Module\Task\Repository\TaskRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,7 +20,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class TaskListController extends AbstractController
 {
     public function __construct(
-        private readonly TaskRepository $taskRepository,
+        private readonly TaskListQueryService $taskListQueryService,
         private readonly CategoryRepository $categoryRepository,
         private readonly TaskFilterRequestFactory $filterRequestFactory,
         private readonly AuthenticatedUserProvider $authenticatedUserProvider,
@@ -32,7 +32,7 @@ final class TaskListController extends AbstractController
     {
         $filter = $this->filterRequestFactory->createFromRequest($request);
 
-        $tasks = $this->taskRepository->findTasksByView(
+        $tasks = $this->taskListQueryService->findTasksByView(
             categoryId: $filter->categoryId,
             priority: $filter->priority,
             view: $filter->view,
@@ -50,7 +50,7 @@ final class TaskListController extends AbstractController
     {
         $filter = $this->filterRequestFactory->createFromRequest($request);
 
-        $tasks = $this->taskRepository->findTasksByView(
+        $tasks = $this->taskListQueryService->findTasksByView(
             categoryId: $filter->categoryId,
             priority: $filter->priority,
             view: $filter->view,
