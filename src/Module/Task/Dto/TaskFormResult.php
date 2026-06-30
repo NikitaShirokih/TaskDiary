@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Dto;
 
-use App\Dto\TaskData;
+use App\Module\Task\Dto\TaskData;
 use Symfony\Component\HttpFoundation\Response;
 
 final readonly class TaskFormResult

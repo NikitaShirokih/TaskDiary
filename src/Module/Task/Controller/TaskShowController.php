@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Module\Task\Controller;
 
 use App\Entity\TaskComment;
-use App\Enum\TaskRights;
-use App\Enum\UserRole;
-use App\Form\TaskCommentFormType;
-use App\Service\TaskService;
+use App\Module\Task\Enum\TaskRights;
+use App\Module\User\Enum\UserRole;
+use App\Module\Task\Form\TaskCommentFormType;
+use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;

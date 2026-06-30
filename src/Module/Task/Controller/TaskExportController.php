@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Controller;
 
-use App\Enum\TaskRights;
-use App\Enum\UserRole;
-use App\Service\TaskExportService;
-use App\Service\TaskService;
+use App\Module\Task\Enum\TaskRights;
+use App\Module\User\Enum\UserRole;
+use App\Module\Task\Service\TaskExportService;
+use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;

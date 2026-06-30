@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Repository\TaskCommentRepository;
+use App\Module\Task\Repository\TaskCommentRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: TaskCommentRepository::class)]
@@ -13,7 +13,7 @@ class TaskComment
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    private ?int $id = null;
+    private int $id;
 
     #[ORM\Column(type: 'text')]
     private ?string $content = null;
@@ -36,7 +36,12 @@ class TaskComment
 
     public function getId(): ?int
     {
-        return $this->id;
+        return $this->id ?? null;
+    }
+
+    protected function setId(int $id): void
+    {
+        $this->id = $id;
     }
 
     public function getContent(): ?string

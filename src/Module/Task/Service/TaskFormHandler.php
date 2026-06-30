@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Service;
 
-use App\Dto\TaskData;
+use App\Module\Task\Dto\TaskData;
 use App\Module\Task\Dto\TaskFormResult;
 use InvalidArgumentException;
 use LogicException;

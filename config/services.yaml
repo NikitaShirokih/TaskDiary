@@ -15,18 +15,18 @@ services:
             - '../src/Entity/'
             - '../src/Kernel.php'
 
-    App\Contract\PromptBuilderInterface:
-        alias: App\Builder\TaskAdvicePromptBuilder
+    App\Module\Ai\Contract\PromptBuilderInterface:
+        alias: App\Module\Ai\Builder\TaskAdvicePromptBuilder
 
-    App\Prompt\TaskPromptContextFactory:
+    App\Module\Ai\Prompt\TaskPromptContextFactory:
         arguments:
             $maxDepth: 3
             $maxRelationsPerNode: 3
 
     _instanceof:
-        App\Contract\FieldRendererInterface:
+        App\Module\Ai\Contract\FieldRendererInterface:
             tags: ['app.field_renderer']
 
-    App\Prompt\TaskRelationTreeRenderer:
+    App\Module\Ai\Prompt\TaskRelationTreeRenderer:
         arguments:
             $fieldRenderers: !tagged_iterator app.field_renderer

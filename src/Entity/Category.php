@@ -7,7 +7,7 @@ namespace App\Entity;
 use App\Entity\Fields\CreatedAt;
 use App\Entity\Fields\Id;
 use App\Entity\Fields\UpdatedAt;
-use App\Repository\CategoryRepository;
+use App\Module\Category\Repository\CategoryRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;

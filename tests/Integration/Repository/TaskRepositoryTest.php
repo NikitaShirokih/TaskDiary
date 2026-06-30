@@ -6,9 +6,9 @@ namespace App\Tests\Integration\Repository;
 
 use App\Entity\Task;
 use App\Entity\User;
-use App\Enum\TaskPriority;
-use App\Enum\TaskStatus;
-use App\Repository\TaskRepository;
+use App\Module\Task\Enum\TaskPriority;
+use App\Module\Task\Enum\TaskStatus;
+use App\Module\Task\Repository\TaskRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 

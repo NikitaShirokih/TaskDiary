@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Controller;
 
-use App\Dto\TaskData;
-use App\Enum\TaskRights;
-use App\Enum\UserRole;
+use App\Module\Task\Dto\TaskData;
+use App\Module\Task\Enum\TaskRights;
+use App\Module\User\Enum\UserRole;
 use App\Module\Task\Service\TaskFormHandler;
-use App\Repository\CategoryRepository;
-use App\Service\TaskService;
+use App\Module\Category\Repository\CategoryRepository;
+use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;

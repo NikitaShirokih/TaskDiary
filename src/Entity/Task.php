@@ -7,9 +7,9 @@ namespace App\Entity;
 use App\Entity\Fields\CreatedAt;
 use App\Entity\Fields\Id;
 use App\Entity\Fields\UpdatedAt;
-use App\Enum\TaskPriority;
-use App\Enum\TaskStatus;
-use App\Repository\TaskRepository;
+use App\Module\Task\Enum\TaskPriority;
+use App\Module\Task\Enum\TaskStatus;
+use App\Module\Task\Repository\TaskRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -56,6 +56,7 @@ class Task
     #[ORM\JoinColumn(nullable: true, onDelete: 'CASCADE')]
     private ?Task $parent = null;
 
+    /** @var Collection<int, TaskComment> */
     #[ORM\OneToMany(mappedBy: 'task', targetEntity: TaskComment::class, orphanRemoval: true)]
     private Collection $comments;
 
@@ -241,6 +242,7 @@ class Task
             && !$this->isCompleted();
     }
 
+    /** @return Collection<int, TaskComment> */
     public function getComments(): Collection
     {
         return $this->comments;

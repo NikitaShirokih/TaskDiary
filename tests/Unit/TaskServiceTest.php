@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
-use App\Dto\TaskData;
+use App\Module\Task\Dto\TaskData;
 use App\Entity\Category;
 use App\Entity\Task;
 use App\Entity\User;
-use App\Enum\TaskPriority;
-use App\Enum\TaskStatus;
-use App\Exception\TaskNotFoundException;
-use App\Repository\CategoryRepository;
-use App\Repository\TaskRepository;
-use App\Service\TaskService;
+use App\Module\Task\Enum\TaskPriority;
+use App\Module\Task\Enum\TaskStatus;
+use App\Module\Task\Exception\TaskNotFoundException;
+use App\Module\Category\Repository\CategoryRepository;
+use App\Module\Task\Repository\TaskRepository;
+use App\Module\Task\Service\TaskService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -29,7 +29,7 @@ final class TaskServiceTest extends TestCase
     {
         return new TaskService(
             $entityManager ?? $this->createStub(EntityManagerInterface::class),
-            $categoryRepository ?? $this->createStub(CategoryRepository::class),
+            $categoryRepository ?? $this->makeCategoryRepositoryWithDefaultCategory(),
             $taskRepository ?? $this->createStub(TaskRepository::class),
             $security ?? $this->createStub(Security::class),
         );
@@ -42,8 +42,7 @@ final class TaskServiceTest extends TestCase
         ?string             $description = null,
         ?\DateTimeImmutable $startTime = null,
         ?\DateTimeImmutable $endTime = null,
-        ?int                $categoryId = null,
-        ?int                $parentId = null,
+        ?int                $categoryId = 1,
     ): TaskData
     {
         return new TaskData(
@@ -54,8 +53,17 @@ final class TaskServiceTest extends TestCase
             startTime: $startTime,
             endTime: $endTime,
             categoryId: $categoryId,
-            parentId: $parentId,
         );
+    }
+
+    private function makeCategoryRepositoryWithDefaultCategory(): CategoryRepository
+    {
+        $category = $this->createStub(Category::class);
+
+        $categoryRepository = $this->createStub(CategoryRepository::class);
+        $categoryRepository->method('find')->willReturn($category);
+
+        return $categoryRepository;
     }
 
     private function makeSecurityWithUser(): Security
@@ -464,4 +472,3 @@ final class TaskServiceTest extends TestCase
         $service->updateStatus(999, TaskStatus::Completed->value);
     }
 }
-

@@ -6,8 +6,8 @@ namespace App\Module\Task\Controller;
 
 use App\Entity\Task;
 use App\Entity\TaskComment;
-use App\Enum\UserRole;
-use App\Form\TaskCommentFormType;
+use App\Module\User\Enum\UserRole;
+use App\Module\Task\Form\TaskCommentFormType;
 use App\Module\Task\Service\AuthenticatedUserProvider;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;

@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Enum\UserRole;
-use App\Repository\UserRepository;
+use App\Module\User\Enum\UserRole;
+use App\Module\User\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
@@ -19,7 +19,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    private ?int $id = null;
+    private int $id;
 
     #[ORM\Column(length: 180, unique: true)]
     private ?string $email = null;
@@ -42,7 +42,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function getId(): ?int
     {
-        return $this->id;
+        return $this->id ?? null;
+    }
+
+    protected function setId(int $id): void
+    {
+        $this->id = $id;
     }
 
     public function getEmail(): ?string
@@ -129,7 +134,6 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->tasks->contains($task)) {
             $this->tasks->add($task);
-            $task->setUser($this);
         }
 
         return $this;
@@ -137,11 +141,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function removeTask(Task $task): static
     {
-        if ($this->tasks->removeElement($task)) {
-            if ($task->getUser() === $this) {
-                $task->setUser(null);
-            }
-        }
+        $this->tasks->removeElement($task);
 
         return $this;
     }
