@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Fixtures;
+namespace App\Form\Fixtures;
 
 use App\Entity\User;
 use Doctrine\Bundle\FixturesBundle\Fixture;
