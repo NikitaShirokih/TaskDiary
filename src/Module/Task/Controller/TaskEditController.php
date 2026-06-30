@@ -8,7 +8,6 @@ use App\Module\Task\Dto\TaskData;
 use App\Module\Task\Enum\TaskRights;
 use App\Module\Main\Enum\UserRole;
 use App\Module\Task\Service\TaskFormHandler;
-use App\Module\Task\Repository\CategoryRepository;
 use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,7 +21,6 @@ final class TaskEditController extends AbstractController
 {
     public function __construct(
         private readonly TaskService $taskService,
-        private readonly CategoryRepository $categoryRepository,
         private readonly TaskFormHandler $taskFormHandler,
     ) {
     }
@@ -37,7 +35,6 @@ final class TaskEditController extends AbstractController
         if (!$request->isMethod('POST')) {
             return $this->render('task/edit.html.twig', [
                 'task' => $task,
-                'categories' => $this->categoryRepository->findAll(),
                 'taskData' => null,
             ]);
         }
@@ -66,7 +63,6 @@ final class TaskEditController extends AbstractController
 
         return $this->render('task/edit.html.twig', [
             'task' => $task,
-            'categories' => $this->categoryRepository->findAll(),
             'taskData' => $result->taskData,
         ]);
     }

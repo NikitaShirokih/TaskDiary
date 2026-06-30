@@ -2,7 +2,7 @@
 
 ![PHP](https://img.shields.io/badge/PHP-8.2+-777BB4?style=flat&logo=php&logoColor=white)
 ![Symfony](https://img.shields.io/badge/Symfony-7.3-000000?style=flat&logo=symfony&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat&logo=mysql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-4169E1?style=flat&logo=postgresql&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-ready-2496ED?style=flat&logo=docker&logoColor=white)
 ![CI](https://github.com/NikitaShirokih/TaskDiary/actions/workflows/ci.yml/badge.svg)
 
@@ -15,8 +15,9 @@
 | | |
 |---|---|
 | Backend | PHP 8.2+, Symfony 7.3 |
-| База данных | MySQL 8.0 |
-| Инфраструктура | Docker, Nginx |
+| База данных | PostgreSQL 15 |
+| Кэш | Redis 7.2 |
+| Инфраструктура | Docker, Nginx, PostgreSQL, Redis |
 | Качество кода | PHPStan level 6, PSR-12 |
 
 ---

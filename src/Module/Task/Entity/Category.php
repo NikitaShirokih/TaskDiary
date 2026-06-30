@@ -7,6 +7,7 @@ namespace App\Module\Task\Entity;
 use App\Common\Entity\Fields\CreatedAt;
 use App\Common\Entity\Fields\Id;
 use App\Common\Entity\Fields\UpdatedAt;
+use App\Module\Main\Entity\User;
 use App\Module\Task\Repository\CategoryRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -14,6 +15,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: CategoryRepository::class)]
 #[ORM\Table(name: 'categories')]
+#[ORM\UniqueConstraint(name: 'uniq_category_user_name', columns: ['user_id', 'name'])]
 #[ORM\HasLifecycleCallbacks]
 class Category
 {
@@ -21,8 +23,12 @@ class Category
     use CreatedAt;
     use UpdatedAt;
 
-    #[ORM\Column(length: 100, unique: true)]
+    #[ORM\Column(length: 100)]
     private ?string $name = null;
+
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
+    private User $user;
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $description = null;
@@ -37,11 +43,12 @@ class Category
     #[ORM\OneToMany(targetEntity: Task::class, mappedBy: 'category')]
     private Collection $tasks;
 
-    public function __construct()
+    public function __construct(User $user)
     {
         $this->initCreatedAt();
         $this->tasks = new ArrayCollection();
         $this->color = '#3498db';
+        $this->user = $user;
     }
 
     public function __toString(): string
@@ -59,6 +66,11 @@ class Category
         $this->name = $name;
 
         return $this;
+    }
+
+    public function getUser(): User
+    {
+        return $this->user;
     }
 
     public function getDescription(): ?string

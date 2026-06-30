@@ -45,7 +45,7 @@ final class TaskServiceTest extends TestCase
         ?string             $description = null,
         ?\DateTimeImmutable $startTime = null,
         ?\DateTimeImmutable $endTime = null,
-        ?int                $categoryId = 1,
+        string              $categoryName = 'Работа',
     ): TaskData
     {
         return new TaskData(
@@ -55,7 +55,7 @@ final class TaskServiceTest extends TestCase
             status: $status,
             startTime: $startTime,
             endTime: $endTime,
-            categoryId: $categoryId,
+            categoryName: $categoryName,
         );
     }
 
@@ -64,16 +64,15 @@ final class TaskServiceTest extends TestCase
         $category = $this->createStub(Category::class);
 
         $categoryRepository = $this->createStub(CategoryRepository::class);
-        $categoryRepository->method('find')->willReturn($category);
+        $categoryRepository->method('findOneByUserAndName')->willReturn($category);
 
         return $categoryRepository;
     }
 
-    private function makeSecurityWithUser(): Security
+    private function makeSecurityWithUser(?User $user = null): Security
     {
-        $user = $this->makeUser();
         $security = $this->createStub(Security::class);
-        $security->method('getUser')->willReturn($user);
+        $security->method('getUser')->willReturn($user ?? $this->makeUser());
 
         return $security;
     }
@@ -124,12 +123,13 @@ final class TaskServiceTest extends TestCase
 
     public function testAddTaskResolvesCategory(): void
     {
+        $user = $this->makeUser();
         $category = $this->createStub(Category::class);
 
         $categoryRepo = $this->createMock(CategoryRepository::class);
         $categoryRepo->expects($this->once())
-            ->method('find')
-            ->with(42)
+            ->method('findOneByUserAndName')
+            ->with($user, 'Работа')
             ->willReturn($category);
 
         $em = $this->createMock(EntityManagerInterface::class);
@@ -142,21 +142,26 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $this->makeSecurityWithUser(),
+            security: $this->makeSecurityWithUser($user),
             categoryRepository: $categoryRepo,
         );
 
-        $service->addTask($this->makeData(categoryId: 42));
+        $service->addTask($this->makeData(categoryName: 'Работа'));
     }
 
-    public function testAddTaskThrowsWhenCategoryNotFound(): void
+    public function testAddTaskCreatesCategoryWhenCategoryNotFound(): void
     {
         $categoryRepo = $this->createStub(CategoryRepository::class);
-        $categoryRepo->method('find')->willReturn(null);
+        $categoryRepo->method('findOneByUserAndName')->willReturn(null);
 
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->never())->method('persist');
-        $em->expects($this->never())->method('flush');
+        $em->expects($this->exactly(2))
+            ->method('persist')
+            ->with($this->logicalOr(
+                $this->isInstanceOf(Category::class),
+                $this->isInstanceOf(Task::class),
+            ));
+        $em->expects($this->once())->method('flush');
 
         $service = $this->makeService(
             entityManager: $em,
@@ -164,9 +169,23 @@ final class TaskServiceTest extends TestCase
             categoryRepository: $categoryRepo,
         );
 
+        $service->addTask($this->makeData(categoryName: 'Новая категория'));
+    }
+
+    public function testAddTaskThrowsWhenCategoryNameIsEmpty(): void
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->never())->method('persist');
+        $em->expects($this->never())->method('flush');
+
+        $service = $this->makeService(
+            entityManager: $em,
+            security: $this->makeSecurityWithUser(),
+        );
+
         $this->expectException(\RuntimeException::class);
 
-        $service->addTask($this->makeData(categoryId: 99));
+        $service->addTask($this->makeData(categoryName: '   '));
     }
 
     public function testAddSubtaskPersistsSubtaskWithParent(): void

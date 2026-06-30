@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Module\Task\DataFixtures;
 
+use App\Module\Main\DataFixtures\UserFixtures;
+use App\Module\Main\Entity\User;
 use App\Module\Task\Entity\Category;
+use Doctrine\Common\DataFixtures\DependentFixtureInterface;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Persistence\ObjectManager;
 
-final class CategoryFixtures extends Fixture
+final class CategoryFixtures extends Fixture implements DependentFixtureInterface
 {
     public function load(ObjectManager $manager): void
     {
@@ -23,16 +26,35 @@ final class CategoryFixtures extends Fixture
             ['name' => 'Разное',        'color' => '#95a5a6', 'icon' => 'three-dots',    'description' => 'Всё остальное'],
         ];
 
-        foreach ($categories as $data) {
-            $category = new Category();
-            $category->setName($data['name']);
-            $category->setColor($data['color']);
-            $category->setIcon($data['icon']);
-            $category->setDescription($data['description']);
+        foreach ($this->getFixtureUsers() as $user) {
+            foreach ($categories as $data) {
+                $category = new Category($user);
+                $category->setName($data['name']);
+                $category->setColor($data['color']);
+                $category->setIcon($data['icon']);
+                $category->setDescription($data['description']);
 
-            $manager->persist($category);
+                $manager->persist($category);
+            }
         }
 
         $manager->flush();
+    }
+
+    /** @return list<User> */
+    private function getFixtureUsers(): array
+    {
+        return [
+            $this->getReference(UserFixtures::USER_REFERENCE, User::class),
+            $this->getReference(UserFixtures::ADMIN_REFERENCE, User::class),
+        ];
+    }
+
+    /** @return list<class-string<Fixture>> */
+    public function getDependencies(): array
+    {
+        return [
+            UserFixtures::class,
+        ];
     }
 }

@@ -7,7 +7,6 @@ namespace App\Module\Task\Controller;
 use App\Module\Task\Dto\TaskData;
 use App\Module\Main\Enum\UserRole;
 use App\Module\Task\Service\TaskFormHandler;
-use App\Module\Task\Repository\CategoryRepository;
 use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,7 +20,6 @@ final class TaskCreateController extends AbstractController
 {
     public function __construct(
         private readonly TaskService $taskService,
-        private readonly CategoryRepository $categoryRepository,
         private readonly TaskFormHandler $taskFormHandler,
     ) {
     }
@@ -30,7 +28,6 @@ final class TaskCreateController extends AbstractController
     public function new(): Response
     {
         return $this->render('task/create.html.twig', [
-            'categories' => $this->categoryRepository->findAll(),
             'taskData' => null,
             'parent' => null,
         ]);
@@ -63,7 +60,6 @@ final class TaskCreateController extends AbstractController
 
         return $this->render('task/create.html.twig', [
             'parent' => null,
-            'categories' => $this->categoryRepository->findAll(),
             'taskData' => $result->taskData,
         ]);
     }

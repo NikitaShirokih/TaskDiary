@@ -31,17 +31,18 @@ final class TaskListController extends AbstractController
     public function list(Request $request): Response
     {
         $filter = $this->filterRequestFactory->createFromRequest($request);
+        $user = $this->authenticatedUserProvider->getUser();
 
         $tasks = $this->taskListQueryService->findTasksByView(
             categoryId: $filter->categoryId,
             priority: $filter->priority,
             view: $filter->view,
-            user: $this->authenticatedUserProvider->getUser(),
+            user: $user,
         );
 
         return $this->render('task/list.html.twig', [
             'tasks' => $tasks,
-            'categories' => $this->categoryRepository->findAll(),
+            'categories' => $this->categoryRepository->findByUser($user),
         ]);
     }
 

@@ -8,7 +8,6 @@ use App\Module\Task\Dto\TaskData;
 use App\Module\Task\Enum\TaskRights;
 use App\Module\Main\Enum\UserRole;
 use App\Module\Task\Service\TaskFormHandler;
-use App\Module\Task\Repository\CategoryRepository;
 use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,7 +21,6 @@ final class SubtaskController extends AbstractController
 {
     public function __construct(
         private readonly TaskService $taskService,
-        private readonly CategoryRepository $categoryRepository,
         private readonly TaskFormHandler $taskFormHandler,
     ) {
     }
@@ -35,7 +33,6 @@ final class SubtaskController extends AbstractController
         $this->denyAccessUnlessGranted(TaskRights::EDIT->value, $parent);
 
         return $this->render('task/create.html.twig', [
-            'categories' => $this->categoryRepository->findAll(),
             'taskData' => null,
             'parent' => $parent,
         ]);
@@ -72,7 +69,6 @@ final class SubtaskController extends AbstractController
 
         return $this->render('task/create.html.twig', [
             'parent' => $parent,
-            'categories' => $this->categoryRepository->findAll(),
             'taskData' => $result->taskData,
         ]);
     }

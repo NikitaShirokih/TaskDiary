@@ -31,7 +31,7 @@ final readonly class TaskData
 
         public ?DateTimeImmutable $endTime,
 
-        public ?int $categoryId,
+        public string $categoryName,
     ) {
     }
 
@@ -54,12 +54,7 @@ final readonly class TaskData
         $startTime = self::parseDateTime($request->request->get('start_time'));
         $endTime = self::parseDateTime($request->request->get('end_time'));
 
-        $categoryValue = $request->request->get('category');
-        $categoryId = null;
-
-        if (null !== $categoryValue && '' !== $categoryValue) {
-            $categoryId = (int) $categoryValue;
-        }
+        $categoryName = trim((string) $request->request->get('categoryName', ''));
 
         return new self(
             title: $title,
@@ -68,7 +63,7 @@ final readonly class TaskData
             status: $status,
             startTime: $startTime,
             endTime: $endTime,
-            categoryId: $categoryId,
+            categoryName: $categoryName,
         );
     }
 

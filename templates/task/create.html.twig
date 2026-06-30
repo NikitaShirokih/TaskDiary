@@ -65,13 +65,6 @@
             <div class="card-body p-4">
                 <h4 class="mb-4">Информация о задаче</h4>
 
-                {% if not (parent is defined and parent) and categories is defined and categories|length == 0 %}
-                    <div class="alert alert-warning">
-                        Категории не найдены. Вы можете создать задачу без категории
-                        или сначала добавить категории.
-                    </div>
-                {% endif %}
-
                 <form
                     method="post"
                     action="{{ parent is defined and parent
@@ -200,17 +193,15 @@
 
                             <div class="col-md-6">
                                 <label for="category" class="form-label fw-semibold">Категория</label>
-                                {% set currentCategory = taskData ? taskData.categoryId : app.request.request.get('category') %}
-                                <select id="category" name="category" class="form-select" required>
-                                    <option value="" disabled {{ currentCategory is empty ? 'selected' }}>
-                                        — Выберите категорию —
-                                    </option>
-                                    {% for category in categories %}
-                                        <option value="{{ category.id }}" {{ currentCategory == category.id ? 'selected' }}>
-                                            {{ category.name }}
-                                        </option>
-                                    {% endfor %}
-                                </select>
+                                <input
+                                    id="category"
+                                    type="text"
+                                    name="categoryName"
+                                    class="form-control"
+                                    value="{{ taskData ? taskData.categoryName : app.request.request.get('categoryName') }}"
+                                    placeholder="Например: Работа, Учёба, Спорт"
+                                    required
+                                >
                             </div>
 
                         {% endif %}

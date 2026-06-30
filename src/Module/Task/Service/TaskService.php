@@ -36,7 +36,7 @@ final class TaskService
     {
         $user = $this->getAuthenticatedUser();
 
-        $category = $this->resolveRequiredCategory($data->categoryId);
+        $category = $this->resolveOrCreateCategory($user, $data->categoryName);
         $priority = $this->resolvePriority($data->priority);
         $status = $this->resolveStatus($data->status);
 
@@ -110,7 +110,7 @@ final class TaskService
              */
             $task->assignCategory(null);
         } else {
-            $category = $this->resolveRequiredCategory($data->categoryId);
+            $category = $this->resolveOrCreateCategory($user, $data->categoryName);
 
             $task->assignCategory($category);
             $task->schedule($data->startTime, $data->endTime);
@@ -173,17 +173,27 @@ final class TaskService
         $this->eventDispatcher->dispatch(new TaskChangedEvent($userId));
     }
 
-    private function resolveRequiredCategory(?int $categoryId): Category
+    private function resolveOrCreateCategory(User $user, string $categoryName): Category
     {
-        if (null === $categoryId) {
+        $name = trim($categoryName);
+
+        if ('' === $name) {
             throw new RuntimeException('Для основной задачи необходимо выбрать категорию.');
         }
 
-        $category = $this->categoryRepository->find($categoryId);
+        $category = $this->categoryRepository->findOneByUserAndName($user, $name);
 
-        if (!$category instanceof Category) {
-            throw new RuntimeException(sprintf('Категория #%d не найдена.', $categoryId));
+        if ($category instanceof Category) {
+            return $category;
         }
+
+        $category = new Category($user);
+        $category->setName($name);
+        $category->setColor('#3498db');
+        $category->setIcon(null);
+        $category->setDescription(null);
+
+        $this->entityManager->persist($category);
 
         return $category;
     }
