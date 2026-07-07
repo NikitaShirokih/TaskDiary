@@ -7,5 +7,3 @@ parameters:
         - src/Kernel.php
     symfony:
         containerXmlPath: var/cache/dev/App_KernelDevDebugContainer.xml
-    ignoreErrors:
-        - '#Property App\\Entity\\User::\$id \(int\|null\) is never assigned int#'

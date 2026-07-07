@@ -4,19 +4,20 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
-use App\Dto\TaskData;
-use App\Entity\Category;
-use App\Entity\Task;
-use App\Entity\User;
-use App\Enum\TaskPriority;
-use App\Enum\TaskStatus;
-use App\Exception\TaskNotFoundException;
-use App\Repository\CategoryRepository;
-use App\Repository\TaskRepository;
-use App\Service\TaskService;
+use App\Module\Task\Dto\TaskData;
+use App\Module\Task\Entity\Category;
+use App\Module\Task\Entity\Task;
+use App\Module\Main\Entity\User;
+use App\Module\Task\Enum\TaskPriority;
+use App\Module\Task\Enum\TaskStatus;
+use App\Module\Task\Exception\TaskNotFoundException;
+use App\Module\Task\Repository\CategoryRepository;
+use App\Module\Task\Repository\TaskRepository;
+use App\Module\Task\Service\TaskService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final class TaskServiceTest extends TestCase
 {
@@ -25,13 +26,15 @@ final class TaskServiceTest extends TestCase
         ?Security               $security = null,
         ?CategoryRepository     $categoryRepository = null,
         ?TaskRepository         $taskRepository = null,
+        ?EventDispatcherInterface $eventDispatcher = null,
     ): TaskService
     {
         return new TaskService(
             $entityManager ?? $this->createStub(EntityManagerInterface::class),
-            $categoryRepository ?? $this->createStub(CategoryRepository::class),
+            $categoryRepository ?? $this->makeCategoryRepositoryWithDefaultCategory(),
             $taskRepository ?? $this->createStub(TaskRepository::class),
             $security ?? $this->createStub(Security::class),
+            $eventDispatcher ?? $this->createStub(EventDispatcherInterface::class),
         );
     }
 
@@ -42,8 +45,7 @@ final class TaskServiceTest extends TestCase
         ?string             $description = null,
         ?\DateTimeImmutable $startTime = null,
         ?\DateTimeImmutable $endTime = null,
-        ?int                $categoryId = null,
-        ?int                $parentId = null,
+        string              $categoryName = 'Работа',
     ): TaskData
     {
         return new TaskData(
@@ -53,18 +55,34 @@ final class TaskServiceTest extends TestCase
             status: $status,
             startTime: $startTime,
             endTime: $endTime,
-            categoryId: $categoryId,
-            parentId: $parentId,
+            categoryName: $categoryName,
         );
     }
 
-    private function makeSecurityWithUser(): Security
+    private function makeCategoryRepositoryWithDefaultCategory(): CategoryRepository
     {
-        $user = $this->createStub(User::class);
+        $category = $this->createStub(Category::class);
+
+        $categoryRepository = $this->createStub(CategoryRepository::class);
+        $categoryRepository->method('findOneByUserAndName')->willReturn($category);
+
+        return $categoryRepository;
+    }
+
+    private function makeSecurityWithUser(?User $user = null): Security
+    {
         $security = $this->createStub(Security::class);
-        $security->method('getUser')->willReturn($user);
+        $security->method('getUser')->willReturn($user ?? $this->makeUser());
 
         return $security;
+    }
+
+    private function makeUser(): User
+    {
+        $user = $this->createStub(User::class);
+        $user->method('getId')->willReturn(1);
+
+        return $user;
     }
 
     public function testAddTaskPersistsTaskWithCorrectTitle(): void
@@ -105,12 +123,13 @@ final class TaskServiceTest extends TestCase
 
     public function testAddTaskResolvesCategory(): void
     {
+        $user = $this->makeUser();
         $category = $this->createStub(Category::class);
 
         $categoryRepo = $this->createMock(CategoryRepository::class);
         $categoryRepo->expects($this->once())
-            ->method('find')
-            ->with(42)
+            ->method('findOneByUserAndName')
+            ->with($user, 'Работа')
             ->willReturn($category);
 
         $em = $this->createMock(EntityManagerInterface::class);
@@ -123,21 +142,26 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $this->makeSecurityWithUser(),
+            security: $this->makeSecurityWithUser($user),
             categoryRepository: $categoryRepo,
         );
 
-        $service->addTask($this->makeData(categoryId: 42));
+        $service->addTask($this->makeData(categoryName: 'Работа'));
     }
 
-    public function testAddTaskThrowsWhenCategoryNotFound(): void
+    public function testAddTaskCreatesCategoryWhenCategoryNotFound(): void
     {
         $categoryRepo = $this->createStub(CategoryRepository::class);
-        $categoryRepo->method('find')->willReturn(null);
+        $categoryRepo->method('findOneByUserAndName')->willReturn(null);
 
         $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->never())->method('persist');
-        $em->expects($this->never())->method('flush');
+        $em->expects($this->exactly(2))
+            ->method('persist')
+            ->with($this->logicalOr(
+                $this->isInstanceOf(Category::class),
+                $this->isInstanceOf(Task::class),
+            ));
+        $em->expects($this->once())->method('flush');
 
         $service = $this->makeService(
             entityManager: $em,
@@ -145,14 +169,28 @@ final class TaskServiceTest extends TestCase
             categoryRepository: $categoryRepo,
         );
 
+        $service->addTask($this->makeData(categoryName: 'Новая категория'));
+    }
+
+    public function testAddTaskThrowsWhenCategoryNameIsEmpty(): void
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->expects($this->never())->method('persist');
+        $em->expects($this->never())->method('flush');
+
+        $service = $this->makeService(
+            entityManager: $em,
+            security: $this->makeSecurityWithUser(),
+        );
+
         $this->expectException(\RuntimeException::class);
 
-        $service->addTask($this->makeData(categoryId: 99));
+        $service->addTask($this->makeData(categoryName: '   '));
     }
 
     public function testAddSubtaskPersistsSubtaskWithParent(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user);
 
@@ -199,7 +237,7 @@ final class TaskServiceTest extends TestCase
 
     public function testAddSubtaskTrimsTitleWhitespace(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user);
 
@@ -227,7 +265,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateTaskRenamesTask(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Старый заголовок');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -248,7 +286,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateTaskChangesPriority(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача', priority: TaskPriority::Low);
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -287,7 +325,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateStatusSetsInProgress(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -308,7 +346,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateStatusSetsCompleted(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -330,7 +368,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateStatusReopensTask(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
         $task->start();
 
@@ -352,7 +390,7 @@ final class TaskServiceTest extends TestCase
 
     public function testUpdateStatusThrowsOnInvalidStatus(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -373,7 +411,7 @@ final class TaskServiceTest extends TestCase
 
     public function testDeleteTaskCallsRemoveAndFlush(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createStub(TaskRepository::class);
@@ -414,7 +452,7 @@ final class TaskServiceTest extends TestCase
 
     public function testGetTaskByIdReturnsTask(): void
     {
-        $user = $this->createStub(User::class);
+        $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
         $taskRepo = $this->createMock(TaskRepository::class);
@@ -464,4 +502,3 @@ final class TaskServiceTest extends TestCase
         $service->updateStatus(999, TaskStatus::Completed->value);
     }
 }
-

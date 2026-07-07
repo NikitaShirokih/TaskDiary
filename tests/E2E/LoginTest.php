@@ -2,7 +2,7 @@
 
 namespace App\Tests\E2E;
 
-use App\Entity\User;
+use App\Module\Main\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Panther\PantherTestCase;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -38,7 +38,7 @@ class LoginTest extends PantherTestCase
 
         $client = static::createPantherClient([
             'env' => [
-                'DATABASE_URL' => 'mysql://selectel:MyPass123!@127.0.0.1:3306/taskdiary?serverVersion=8.0&charset=utf8mb4',
+                'DATABASE_URL' => 'postgresql://user:password@127.0.0.1:5432/taskdiary?serverVersion=15&charset=utf8',
             ],
         ]);
 

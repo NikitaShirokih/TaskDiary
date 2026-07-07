@@ -30,7 +30,7 @@
         {% set statusValue = taskData ? taskData.status : task.status.value %}
         {% set startTimeValue = taskData and taskData.startTime ? taskData.startTime : task.startTime %}
         {% set endTimeValue = taskData and taskData.endTime ? taskData.endTime : task.endTime %}
-        {% set categoryValue = taskData ? taskData.categoryId : (task.category ? task.category.id : null) %}
+        {% set categoryNameValue = taskData ? taskData.categoryName : (task.category ? task.category.name : '') %}
 
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
@@ -102,19 +102,20 @@
                             </select>
                         </div>
 
-                        <div class="col-md-6">
-                            <label for="category" class="form-label fw-semibold">Категория</label>
-                            <select id="category" name="category" class="form-select" required>
-                                <option value="" disabled {{ categoryValue is empty ? 'selected' }}>
-                                    — Выберите категорию —
-                                </option>
-                                {% for category in categories %}
-                                    <option value="{{ category.id }}" {{ categoryValue == category.id ? 'selected' }}>
-                                        {{ category.name }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
+                        {% if not task.isSubtask %}
+                            <div class="col-md-6">
+                                <label for="category" class="form-label fw-semibold">Категория</label>
+                                <input
+                                    id="category"
+                                    type="text"
+                                    name="categoryName"
+                                    class="form-control"
+                                    value="{{ categoryNameValue }}"
+                                    placeholder="Например: Работа, Учёба, Спорт"
+                                    required
+                                >
+                            </div>
+                        {% endif %}
                     </div>
 
                     <div class="d-flex gap-2 mt-4">

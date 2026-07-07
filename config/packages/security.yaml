@@ -1,12 +1,12 @@
 security:
     password_hashers:
-        App\Entity\User:
+        App\Module\Main\Entity\User:
             algorithm: auto
 
     providers:
         app_user_provider:
             entity:
-                class: App\Entity\User
+                class: App\Module\Main\Entity\User
                 property: email
 
     firewalls:

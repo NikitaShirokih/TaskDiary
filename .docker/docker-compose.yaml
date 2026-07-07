@@ -29,10 +29,12 @@ services:
             - DB_NAME=${DB_NAME:-taskdiary}
             - DB_USER=${DB_USER:-user}
             - DB_PASSWORD=${DB_PASSWORD:-password}
+            - REDIS_DSN=${REDIS_DSN:-redis://redis:6379}
         networks:
             - app-network
         depends_on:
             - postgres
+            - redis
         restart: unless-stopped
 
     postgres:
@@ -50,6 +52,18 @@ services:
             - app-network
         restart: unless-stopped
 
+    redis:
+        image: redis:7.2-alpine
+        container_name: task_diary_redis
+        command: redis-server --appendonly no --save ""
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 3s
+            retries: 5
+        restart: unless-stopped
+        networks:
+            - app-network
 
 networks:
     app-network:

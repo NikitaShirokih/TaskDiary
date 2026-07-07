@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Integration\Repository;
 
-use App\Entity\Task;
-use App\Entity\User;
-use App\Enum\TaskPriority;
-use App\Enum\TaskStatus;
-use App\Repository\TaskRepository;
+use App\Module\Task\Entity\Task;
+use App\Module\Main\Entity\User;
+use App\Module\Task\Service\DashboardStatsQueryService;
+use App\Module\Task\Enum\TaskPriority;
+use App\Module\Task\Enum\TaskStatus;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
 
@@ -16,7 +16,7 @@ final class TaskRepositoryTest extends KernelTestCase
 {
     private EntityManagerInterface $em;
 
-    private TaskRepository $repository;
+    private DashboardStatsQueryService $dashboardStatsQueryService;
 
     protected function setUp(): void
     {
@@ -25,10 +25,10 @@ final class TaskRepositoryTest extends KernelTestCase
         $container = self::getContainer();
 
         $this->em = $container->get(EntityManagerInterface::class);
-        $this->repository = $container->get(TaskRepository::class);
+        $this->dashboardStatsQueryService = $container->get(DashboardStatsQueryService::class);
 
-        $this->em->createQuery('DELETE FROM App\Entity\Task t')->execute();
-        $this->em->createQuery('DELETE FROM App\Entity\User u')->execute();
+        $this->em->createQuery('DELETE FROM App\Module\Task\Entity\Task t')->execute();
+        $this->em->createQuery('DELETE FROM App\Module\Main\Entity\User u')->execute();
 
         $this->em->clear();
     }
@@ -69,7 +69,7 @@ final class TaskRepositoryTest extends KernelTestCase
 
         $this->em->flush();
 
-        $count = $this->repository->countActive($user);
+        $count = $this->dashboardStatsQueryService->countActive($user);
 
         self::assertSame(2, $count);
     }

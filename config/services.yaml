@@ -12,21 +12,30 @@ services:
         resource: '../src/'
         exclude:
             - '../src/DependencyInjection/'
-            - '../src/Entity/'
+            - '../src/Common/Entity/'
+            - '../src/Module/*/Entity/'
             - '../src/Kernel.php'
 
-    App\Contract\PromptBuilderInterface:
-        alias: App\Builder\TaskAdvicePromptBuilder
+    App\Module\Ai\Contract\PromptBuilderInterface:
+        alias: App\Module\Ai\Builder\TaskAdvicePromptBuilder
 
-    App\Prompt\TaskPromptContextFactory:
+    App\Module\Ai\Prompt\TaskPromptContextFactory:
         arguments:
             $maxDepth: 3
             $maxRelationsPerNode: 3
 
     _instanceof:
-        App\Contract\FieldRendererInterface:
+        App\Module\Ai\Contract\FieldRendererInterface:
             tags: ['app.field_renderer']
 
-    App\Prompt\TaskRelationTreeRenderer:
+    App\Module\Ai\Prompt\TaskRelationTreeRenderer:
         arguments:
             $fieldRenderers: !tagged_iterator app.field_renderer
+
+    App\Module\Task\Service\DashboardStatsQueryService:
+        arguments:
+            $dashboardCache: '@dashboard.cache'
+
+    App\Module\Task\Service\TaskCacheInvalidator:
+        arguments:
+            $dashboardCache: '@dashboard.cache'
