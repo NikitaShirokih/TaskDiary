@@ -24,6 +24,7 @@ final class UserFixtures extends Fixture
         $user->setEmail('user@example.com');
         $user->setRoles(['ROLE_USER']);
         $user->setPassword($this->passwordHasher->hashPassword($user, 'qwerty'));
+        $user->verifyEmail(new \DateTimeImmutable());
 
         $manager->persist($user);
         $this->addReference(self::USER_REFERENCE, $user);
@@ -32,6 +33,7 @@ final class UserFixtures extends Fixture
         $user->setEmail('admin@example.com');
         $user->setRoles(['ROLE_USER', 'ROLE_ADMIN']);
         $user->setPassword($this->passwordHasher->hashPassword($user, 'qwerty'));
+        $user->verifyEmail(new \DateTimeImmutable());
 
         $manager->persist($user);
         $this->addReference(self::ADMIN_REFERENCE, $user);

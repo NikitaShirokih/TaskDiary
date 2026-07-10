@@ -34,7 +34,7 @@ final class RegistrationController extends AbstractController
         try {
             $this->registrationService->register($result->data);
 
-            $this->addFlash('success', 'Аккаунт успешно создан! Войдите в систему.');
+            $this->addFlash('success', 'Аккаунт успешно создан. Проверьте email для подтверждения регистрации.');
 
             return $this->redirectToRoute('app_login');
         } catch (RuntimeException $e) {

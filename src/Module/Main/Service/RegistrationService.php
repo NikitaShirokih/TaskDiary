@@ -18,6 +18,9 @@ final class RegistrationService
         private readonly UserRepository $userRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $hasher,
+        private readonly EmailVerificationService $emailVerificationService,
+        private readonly UserMailer $userMailer,
+        private readonly string $appBaseUrl,
     ) {
     }
 
@@ -25,7 +28,7 @@ final class RegistrationService
     {
         $email = mb_strtolower(trim($data->email));
 
-        $current = $this->userRepository->findOneBy(['email' => $email,]);
+        $current = $this->userRepository->findOneBy(['email' => $email]);
 
         if ($current !== null) {
             throw UserAlreadyExistsException::byEmail($email);
@@ -43,6 +46,16 @@ final class RegistrationService
         } catch (UniqueConstraintViolationException) {
             throw UserAlreadyExistsException::byEmail($email);
         }
+
+        $token = $this->emailVerificationService->requestVerification($user);
+
+        $verificationUrl = sprintf(
+            '%s/email/verify/%s',
+            rtrim($this->appBaseUrl, '/'),
+            $token,
+        );
+
+        $this->userMailer->sendEmailVerification($user, $verificationUrl);
 
         return $user;
     }

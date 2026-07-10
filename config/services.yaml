@@ -41,3 +41,7 @@ services:
     App\Module\Task\Service\TaskCacheInvalidator:
         arguments:
             $dashboardCache: '@dashboard.cache'
+
+    App\Module\Main\Service\RegistrationService:
+        arguments:
+            $appBaseUrl: '%env(APP_BASE_URL)%'

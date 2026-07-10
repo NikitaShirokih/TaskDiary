@@ -32,6 +32,18 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(length: 255)]
     private ?string $password = null;
 
+    #[ORM\Column(type: 'boolean')]
+    private bool $isVerified = false;
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $emailVerificationToken = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $emailVerificationTokenExpiresAt = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $emailVerifiedAt = null;
+
     /** @var Collection<int, Task> */
     #[ORM\OneToMany(targetEntity: Task::class, mappedBy: 'user', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $tasks;
@@ -123,6 +135,46 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function eraseCredentials(): void
     {
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->isVerified;
+    }
+
+    public function requestEmailVerification(string $token, \DateTimeImmutable $expiresAt): void
+    {
+        $this->emailVerificationToken = $token;
+        $this->emailVerificationTokenExpiresAt = $expiresAt;
+    }
+
+    public function verifyEmail(\DateTimeImmutable $verifiedAt): void
+    {
+        $this->isVerified = true;
+        $this->emailVerifiedAt = $verifiedAt;
+        $this->emailVerificationToken = null;
+        $this->emailVerificationTokenExpiresAt = null;
+    }
+
+    public function getEmailVerificationToken(): ?string
+    {
+        return $this->emailVerificationToken;
+    }
+
+    public function getEmailVerificationTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->emailVerificationTokenExpiresAt;
+    }
+
+    public function getEmailVerifiedAt(): ?\DateTimeImmutable
+    {
+        return $this->emailVerifiedAt;
+    }
+
+    public function isEmailVerificationTokenExpired(\DateTimeImmutable $now): bool
+    {
+        return $this->emailVerificationTokenExpiresAt !== null
+            && $this->emailVerificationTokenExpiresAt <= $now;
     }
 
     /** @return Collection<int, Task> */
