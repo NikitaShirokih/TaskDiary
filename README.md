@@ -60,6 +60,39 @@ make help          # список всех команд
 
 ```
 
+## Локальная почта
+
+- Mailpit UI: http://localhost:8025
+- SMTP внутри Docker: `mailpit:1025`
+- `MAILER_DSN=smtp://mailpit:1025`
+
+Проверка отправки:
+
+```bash
+docker compose -p taskdiary -f .docker/docker-compose.yaml up -d --build
+docker exec -it task_diary_php php bin/console app:send-test-email test@example.com
+```
+
+Проверки:
+
+```bash
+composer dump-autoload
+php bin/console lint:container
+php bin/console debug:container mailer
+php bin/console debug:router
+vendor/bin/phpstan analyse --no-progress
+```
+
+Через Docker:
+
+```bash
+docker exec -it task_diary_php composer dump-autoload
+docker exec -it task_diary_php php bin/console lint:container
+docker exec -it task_diary_php php bin/console debug:container mailer
+docker exec -it task_diary_php php bin/console debug:router
+docker exec -it task_diary_php vendor/bin/phpstan analyse --no-progress
+```
+
 ## Лицензия
 
 "proprietary".

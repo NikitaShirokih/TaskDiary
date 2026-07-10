@@ -14,7 +14,7 @@ class TaskExportService
     public function serializeTask(Task $task): array
     {
         $category = [];
-        if (null !== $task->getCategory()) {
+        if ($task->getCategory() !== null) {
             $category = [
                 'id' => $task->getCategory()->getId(),
                 'name' => $task->getCategory()->getName(),

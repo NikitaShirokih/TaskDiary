@@ -113,7 +113,7 @@ final class AiService
 
     private function getAccessToken(): string
     {
-        if (null !== $this->accessToken) {
+        if ($this->accessToken !== null) {
             return $this->accessToken;
         }
 

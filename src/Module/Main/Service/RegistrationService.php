@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Module\Main\Service;
 
+use App\Module\Main\Dto\RegistrationData;
 use App\Module\Main\Entity\User;
 use App\Module\Main\Exception\UserAlreadyExistsException;
-use App\Module\Main\Exception\ValidationException;
 use App\Module\Main\Repository\UserRepository;
 use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final class RegistrationService
 {
@@ -19,19 +18,12 @@ final class RegistrationService
         private readonly UserRepository $userRepository,
         private readonly EntityManagerInterface $entityManager,
         private readonly UserPasswordHasherInterface $hasher,
-        private readonly ValidatorInterface $validator,
     ) {
     }
 
-    public function register(User $user, string $plainPassword): void
+    public function register(RegistrationData $data): User
     {
-        $errors = $this->validator->validate($user);
-
-        if (count($errors) > 0) {
-            throw new ValidationException($errors);
-        }
-
-        $email = (string)$user->getEmail();
+        $email = mb_strtolower(trim($data->email));
 
         $current = $this->userRepository->findOneBy(['email' => $email,]);
 
@@ -39,7 +31,10 @@ final class RegistrationService
             throw UserAlreadyExistsException::byEmail($email);
         }
 
-        $hashedPassword = $this->hasher->hashPassword($user, $plainPassword);
+        $user = new User();
+        $user->setEmail($email);
+
+        $hashedPassword = $this->hasher->hashPassword($user, $data->plainPassword);
         $user->setPassword($hashedPassword);
 
         try {
@@ -48,5 +43,7 @@ final class RegistrationService
         } catch (UniqueConstraintViolationException) {
             throw UserAlreadyExistsException::byEmail($email);
         }
+
+        return $user;
     }
 }

@@ -8,6 +8,9 @@ use App\Module\Task\Dto\TaskData;
 use App\Module\Main\Enum\UserRole;
 use App\Module\Task\Service\TaskFormHandler;
 use App\Module\Task\Service\TaskService;
+use InvalidArgumentException;
+use LogicException;
+use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -40,18 +43,17 @@ final class TaskCreateController extends AbstractController
             throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
         }
 
-        $result = $this->taskFormHandler->handle(
-            $request,
-            function (TaskData $data): Response {
-                $this->taskService->addTask($data);
+        $result = $this->taskFormHandler->handle($request);
+
+        if ($result->isValid && $result->taskData instanceof TaskData) {
+            try {
+                $this->taskService->addTask($result->taskData);
                 $this->addFlash('success', 'Задача успешно создана.');
 
                 return $this->redirectToRoute('task_list');
-            },
-        );
-
-        if (null !== $result->response) {
-            return $result->response;
+            } catch (InvalidArgumentException|LogicException|RuntimeException $e) {
+                $this->addFlash('error', $e->getMessage());
+            }
         }
 
         foreach ($result->errors as $error) {

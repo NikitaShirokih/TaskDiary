@@ -56,7 +56,7 @@ final readonly class DashboardStatsQueryService
     {
         $userId = $user->getId();
 
-        if (null === $userId) {
+        if ($userId === null) {
             throw new \LogicException('Authenticated user must have an id.');
         }
 
@@ -86,7 +86,7 @@ final readonly class DashboardStatsQueryService
                 TaskStatus::InProgress->value,
             ]);
 
-        if (null !== $user) {
+        if ($user !== null) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -109,7 +109,7 @@ final readonly class DashboardStatsQueryService
                 TaskStatus::InProgress->value,
             ]);
 
-        if (null !== $user) {
+        if ($user !== null) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -129,7 +129,7 @@ final readonly class DashboardStatsQueryService
             ->setParameter('inWeek', new \DateTimeImmutable('+7 days'))
             ->setParameter('done', [TaskStatus::Completed->value]);
 
-        if (null !== $user) {
+        if ($user !== null) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }

@@ -16,7 +16,7 @@ final readonly class TaskFilterRequestFactory
         $priorityValue = $request->query->get('priority');
 
         return new TaskFilter(
-            categoryId: null !== $categoryValue && '' !== $categoryValue ? (int) $categoryValue : null,
+            categoryId: $categoryValue !== null && '' !== $categoryValue ? (int) $categoryValue : null,
             priority: is_string($priorityValue) ? $priorityValue : null,
             view: $request->query->getString('view', 'active'),
         );

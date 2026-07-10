@@ -35,6 +35,16 @@ class TaskComment
         $this->createdAt = new \DateTimeImmutable();
     }
 
+    public static function create(Task $task, User $author, string $content): self
+    {
+        $comment = new self();
+        $comment->setTask($task);
+        $comment->setAuthor($author);
+        $comment->setContent($content);
+
+        return $comment;
+    }
+
     public function getId(): ?int
     {
         return $this->id ?? null;

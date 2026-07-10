@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Main\Exception;
 
-final class UserAlreadyExistsException extends \DomainException
+final class UserAlreadyExistsException extends \RuntimeException
 {
     public static function byEmail(string $email): self
     {

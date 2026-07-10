@@ -328,18 +328,14 @@ final class TaskServiceTest extends TestCase
         $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
-        $taskRepo = $this->createStub(TaskRepository::class);
-        $taskRepo->method('find')->willReturn($task);
-
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects($this->once())->method('flush');
 
         $service = $this->makeService(
             entityManager: $em,
-            taskRepository: $taskRepo,
         );
 
-        $service->updateStatus(1, 'in_progress');
+        $service->updateStatus($task, TaskStatus::InProgress);
 
         $this->assertSame(TaskStatus::InProgress, $task->getStatus());
     }
@@ -349,18 +345,14 @@ final class TaskServiceTest extends TestCase
         $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
 
-        $taskRepo = $this->createStub(TaskRepository::class);
-        $taskRepo->method('find')->willReturn($task);
-
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects($this->once())->method('flush');
 
         $service = $this->makeService(
             entityManager: $em,
-            taskRepository: $taskRepo,
         );
 
-        $service->updateStatus(1, 'completed');
+        $service->updateStatus($task, TaskStatus::Completed);
 
         $this->assertSame(TaskStatus::Completed, $task->getStatus());
         $this->assertTrue($task->isCompleted());
@@ -372,50 +364,22 @@ final class TaskServiceTest extends TestCase
         $task = Task::create(user: $user, title: 'Задача');
         $task->start();
 
-        $taskRepo = $this->createStub(TaskRepository::class);
-        $taskRepo->method('find')->willReturn($task);
-
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects($this->once())->method('flush');
 
         $service = $this->makeService(
             entityManager: $em,
-            taskRepository: $taskRepo,
         );
 
-        $service->updateStatus(1, 'waiting');
+        $service->updateStatus($task, TaskStatus::Waiting);
 
         $this->assertSame(TaskStatus::Waiting, $task->getStatus());
-    }
-
-    public function testUpdateStatusThrowsOnInvalidStatus(): void
-    {
-        $user = $this->makeUser();
-        $task = Task::create(user: $user, title: 'Задача');
-
-        $taskRepo = $this->createStub(TaskRepository::class);
-        $taskRepo->method('find')->willReturn($task);
-
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->never())->method('flush');
-
-        $service = $this->makeService(
-            entityManager: $em,
-            taskRepository: $taskRepo,
-        );
-
-        $this->expectException(\InvalidArgumentException::class);
-
-        $service->updateStatus(1, 'несуществующий_статус');
     }
 
     public function testDeleteTaskCallsRemoveAndFlush(): void
     {
         $user = $this->makeUser();
         $task = Task::create(user: $user, title: 'Задача');
-
-        $taskRepo = $this->createStub(TaskRepository::class);
-        $taskRepo->method('find')->willReturn($task);
 
         $em = $this->createMock(EntityManagerInterface::class);
         $em->expects($this->once())
@@ -425,29 +389,9 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            taskRepository: $taskRepo,
         );
 
-        $service->deleteTask(1);
-    }
-
-    public function testDeleteTaskThrowsWhenTaskNotFound(): void
-    {
-        $taskRepo = $this->createStub(TaskRepository::class);
-        $taskRepo->method('find')->willReturn(null);
-
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->never())->method('remove');
-        $em->expects($this->never())->method('flush');
-
-        $service = $this->makeService(
-            entityManager: $em,
-            taskRepository: $taskRepo,
-        );
-
-        $this->expectException(TaskNotFoundException::class);
-
-        $service->deleteTask(999);
+        $service->deleteTask($task);
     }
 
     public function testGetTaskByIdReturnsTask(): void
@@ -481,24 +425,4 @@ final class TaskServiceTest extends TestCase
         $service->getTaskById(42);
     }
 
-    public function testUpdateStatusThrowsWhenTaskNotFound(): void
-    {
-        $taskRepo = $this->createMock(TaskRepository::class);
-        $taskRepo->expects($this->once())
-            ->method('find')
-            ->with(999)
-            ->willReturn(null);
-
-        $em = $this->createMock(EntityManagerInterface::class);
-        $em->expects($this->never())->method('flush');
-
-        $service = $this->makeService(
-            entityManager: $em,
-            taskRepository: $taskRepo,
-        );
-
-        $this->expectException(TaskNotFoundException::class);
-
-        $service->updateStatus(999, TaskStatus::Completed->value);
-    }
 }

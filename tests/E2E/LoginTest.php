@@ -38,7 +38,7 @@ class LoginTest extends PantherTestCase
 
         $client = static::createPantherClient([
             'env' => [
-                'DATABASE_URL' => 'postgresql://user:password@127.0.0.1:5432/taskdiary?serverVersion=15&charset=utf8',
+                'DATABASE_URL' => 'postgresql://user:password@127.0.0.1:5433/taskdiary?serverVersion=15&charset=utf8',
             ],
         ]);
 

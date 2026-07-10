@@ -30,7 +30,7 @@ final readonly class TaskCalendarQueryService
             ->andWhere('t.status != :completed')
             ->setParameter('completed', TaskStatus::Completed->value);
 
-        if (null !== $user) {
+        if ($user !== null) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }

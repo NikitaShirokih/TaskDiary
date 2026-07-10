@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Module\Task\Controller;
 
 use App\Module\Task\Enum\TaskRights;
-use App\Module\Task\Enum\TaskStatus;
 use App\Module\Main\Enum\UserRole;
-use App\Module\Task\Exception\TaskNotFoundException;
 use App\Module\Task\Service\TaskService;
+use App\Module\Task\Service\TaskStatusRequestHandler;
 use InvalidArgumentException;
-use LogicException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,6 +21,7 @@ final class TaskStatusController extends AbstractController
 {
     public function __construct(
         private readonly TaskService $taskService,
+        private readonly TaskStatusRequestHandler $taskStatusRequestHandler,
     ) {
     }
 
@@ -37,36 +36,13 @@ final class TaskStatusController extends AbstractController
             throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
         }
 
-        $statusValue = trim((string) $request->request->get('status', ''));
-
-        if ('' === $statusValue) {
-            $this->addFlash('error', 'Не передан новый статус задачи.');
-
-            return $this->redirectToRoute('task_list');
-        }
-
-        $status = TaskStatus::tryFrom($statusValue);
-
-        if (!$status instanceof TaskStatus) {
-            $this->addFlash('error', 'Некорректный статус задачи.');
-
-            return $this->redirectToRoute('task_list');
-        }
-
         try {
-            $taskId = $task->getId();
+            $status = $this->taskStatusRequestHandler->handle($request);
 
-            if (null === $taskId) {
-                throw new LogicException('Задача должна быть сохранена перед изменением статуса.');
-            }
-
-            $this->taskService->updateStatus(
-                id: $taskId,
-                status: $status->value,
-            );
+            $this->taskService->updateStatus($task, $status);
 
             $this->addFlash('success', 'Статус задачи обновлён.');
-        } catch (InvalidArgumentException|LogicException|TaskNotFoundException $e) {
+        } catch (InvalidArgumentException $e) {
             $this->addFlash('error', $e->getMessage());
         }
 

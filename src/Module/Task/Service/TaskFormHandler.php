@@ -7,10 +7,7 @@ namespace App\Module\Task\Service;
 use App\Module\Task\Dto\TaskData;
 use App\Module\Task\Dto\TaskFormResult;
 use InvalidArgumentException;
-use LogicException;
-use RuntimeException;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 final readonly class TaskFormHandler
@@ -20,15 +17,17 @@ final readonly class TaskFormHandler
     ) {
     }
 
-    /**
-     * @param callable(TaskData): Response $onSuccess
-     */
-    public function handle(Request $request, callable $onSuccess): TaskFormResult
+    public function handle(Request $request): TaskFormResult
     {
         try {
             $taskData = TaskData::fromRequest($request);
         } catch (InvalidArgumentException $e) {
-            return TaskFormResult::failure(null, [$e->getMessage()]);
+            return new TaskFormResult(
+                taskData: null,
+                isSubmitted: true,
+                isValid: false,
+                errors: [$e->getMessage()],
+            );
         }
 
         $errors = [];
@@ -38,13 +37,19 @@ final readonly class TaskFormHandler
         }
 
         if ([] !== $errors) {
-            return TaskFormResult::failure($taskData, $errors);
+            return new TaskFormResult(
+                taskData: $taskData,
+                isSubmitted: true,
+                isValid: false,
+                errors: $errors,
+            );
         }
 
-        try {
-            return TaskFormResult::success($onSuccess($taskData));
-        } catch (InvalidArgumentException|LogicException|RuntimeException $e) {
-            return TaskFormResult::failure($taskData, [$e->getMessage()]);
-        }
+        return new TaskFormResult(
+            taskData: $taskData,
+            isSubmitted: true,
+            isValid: true,
+            errors: [],
+        );
     }
 }

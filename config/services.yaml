@@ -7,6 +7,8 @@ services:
 
         bind:
             string $apiKey: '%env(GIGACHAT_API_KEY)%'
+            string $mailFromAddress: '%env(MAIL_FROM_ADDRESS)%'
+            string $mailFromName: '%env(MAIL_FROM_NAME)%'
 
     App\:
         resource: '../src/'

@@ -35,7 +35,7 @@ final readonly class TaskAnalyticsQueryService
             ->setParameter('completed', TaskStatus::Completed->value)
             ->setParameter('now', new \DateTimeImmutable());
 
-        if (null !== $user) {
+        if ($user !== null) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -56,7 +56,7 @@ final readonly class TaskAnalyticsQueryService
             ->groupBy('c.id')
             ->orderBy('count', 'DESC');
 
-        if (null !== $user) {
+        if ($user !== null) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -80,7 +80,7 @@ final readonly class TaskAnalyticsQueryService
             ->groupBy('date')
             ->orderBy('date', 'ASC');
 
-        if (null !== $user) {
+        if ($user !== null) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
@@ -97,14 +97,14 @@ final readonly class TaskAnalyticsQueryService
             WHERE t.parent_id IS NULL
               AND t.status = :completed
               AND t.updated_at >= :from'
-            .(null !== $user ? ' AND t.user_id = :user' : '');
+            .($user !== null ? ' AND t.user_id = :user' : '');
 
         $params = [
             'completed' => TaskStatus::Completed->value,
             'from' => (new \DateTimeImmutable('-30 days'))->format('Y-m-d H:i:s'),
         ];
 
-        if (null !== $user) {
+        if ($user !== null) {
             $params['user'] = $user->getId();
         }
 
@@ -140,7 +140,7 @@ final readonly class TaskAnalyticsQueryService
             ->groupBy('date')
             ->orderBy('date', 'ASC');
 
-        if (null !== $user) {
+        if ($user !== null) {
             $createdQb->andWhere('t.user = :user')->setParameter('user', $user);
             $completedQb->andWhere('t.user = :user')->setParameter('user', $user);
         }

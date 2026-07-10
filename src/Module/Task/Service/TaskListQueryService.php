@@ -33,18 +33,18 @@ final readonly class TaskListQueryService
             ->andWhere('t.parent IS NULL')
             ->orderBy('t.createdAt', 'DESC');
 
-        if (null !== $user) {
+        if ($user !== null) {
             $qb->andWhere('t.user = :user')
                 ->setParameter('user', $user);
         }
 
-        if (null !== $categoryId) {
+        if ($categoryId !== null) {
             $qb->leftJoin('t.category', 'c')
                 ->andWhere('c.id = :categoryId')
                 ->setParameter('categoryId', $categoryId);
         }
 
-        if (null !== $priority && null !== TaskPriority::tryFrom($priority)) {
+        if ($priority !== null && TaskPriority::tryFrom($priority) !== null) {
             $qb->andWhere('t.priority = :priority')
                 ->setParameter('priority', TaskPriority::from($priority)->value);
         }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Main\Form;
 
-use App\Module\Main\Entity\User;
+use App\Module\Main\Dto\RegistrationData;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
 use Symfony\Component\Form\Extension\Core\Type\PasswordType;
@@ -12,10 +12,11 @@ use Symfony\Component\Form\Extension\Core\Type\RepeatedType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\Email;
+use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
 /**
- * @extends AbstractType<array<string, mixed>>
+ * @extends AbstractType<RegistrationData>
  */
 class RegistrationFormType extends AbstractType
 {
@@ -23,18 +24,27 @@ class RegistrationFormType extends AbstractType
     {
         $builder
             ->add('email', EmailType::class, [
+                'empty_data' => '',
                 'constraints' => [
                     new NotBlank(),
                     new Email(),
                 ],
             ])
             ->add('plainPassword', RepeatedType::class, [
-                'mapped' => false,
                 'type' => PasswordType::class,
                 'first_name' => 'password',
                 'second_name' => 'confirm_password',
+                'invalid_message' => 'Пароли должны совпадать.',
+                'empty_data' => '',
+                'first_options' => [
+                    'empty_data' => '',
+                ],
+                'second_options' => [
+                    'empty_data' => '',
+                ],
                 'constraints' => [
                     new NotBlank(),
+                    new Length(min: 6),
                 ],
             ]);
     }
@@ -42,7 +52,7 @@ class RegistrationFormType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            'data_class' => User::class,
+            'data_class' => RegistrationData::class,
         ]);
     }
 }

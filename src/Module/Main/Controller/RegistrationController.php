@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace App\Module\Main\Controller;
 
-use App\Module\Main\Entity\User;
-use App\Module\Main\Form\RegistrationFormType;
+use App\Module\Main\Service\RegistrationFormHandler;
 use App\Module\Main\Service\RegistrationService;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -16,6 +15,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class RegistrationController extends AbstractController
 {
     public function __construct(
+        private readonly RegistrationFormHandler $registrationFormHandler,
         private readonly RegistrationService $registrationService,
     ) {
     }
@@ -23,32 +23,26 @@ final class RegistrationController extends AbstractController
     #[Route('/register', name: 'app_register', methods: ['GET', 'POST'])]
     public function register(Request $request): Response
     {
-        $form = $this->createForm(RegistrationFormType::class, new User());
-        $form->handleRequest($request);
+        $result = $this->registrationFormHandler->handle($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            try {
-                /** @var User $user */
-                $user = $form->getData();
-
-                $plainPassword = $form->get('plainPassword')->getData();
-
-                if (!is_string($plainPassword) || '' === trim($plainPassword)) {
-                    throw new RuntimeException('Некорректный пароль.');
-                }
-
-                $this->registrationService->register($user, $plainPassword);
-
-                $this->addFlash('success', 'Аккаунт успешно создан! Войдите в систему.');
-
-                return $this->redirectToRoute('app_login');
-            } catch (RuntimeException $e) {
-                $this->addFlash('error', $e->getMessage());
-            }
+        if (!$result->isSubmitted || !$result->isValid) {
+            return $this->render('registration/register.html.twig', [
+                'form' => $result->form,
+            ]);
         }
 
-        return $this->render('registration/register.html.twig', [
-            'form' => $form,
-        ]);
+        try {
+            $this->registrationService->register($result->data);
+
+            $this->addFlash('success', 'Аккаунт успешно создан! Войдите в систему.');
+
+            return $this->redirectToRoute('app_login');
+        } catch (RuntimeException $e) {
+            $this->addFlash('error', $e->getMessage());
+
+            return $this->render('registration/register.html.twig', [
+                'form' => $result->form,
+            ]);
+        }
     }
 }

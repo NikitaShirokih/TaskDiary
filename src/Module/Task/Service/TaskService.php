@@ -121,22 +121,19 @@ final class TaskService
         $this->dispatchTaskChangedForUser($user);
     }
 
-    public function updateStatus(int $id, ?string $status): void
+    public function updateStatus(Task $task, TaskStatus $status): void
     {
-        $task = $this->getTaskById($id);
         $user = $task->getUser();
-        $taskStatus = $this->resolveStatus((string) $status);
 
-        $this->applyStatus($task, $taskStatus);
+        $this->applyStatus($task, $status);
 
         $this->entityManager->flush();
 
         $this->dispatchTaskChangedForUser($user);
     }
 
-    public function deleteTask(int $id): void
+    public function deleteTask(Task $task): void
     {
-        $task = $this->getTaskById($id);
         $user = $task->getUser();
 
         $this->entityManager->remove($task);

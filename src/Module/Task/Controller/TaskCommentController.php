@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Controller;
 
-use App\Module\Task\Entity\Task;
-use App\Module\Task\Entity\TaskComment;
 use App\Module\Main\Enum\UserRole;
+use App\Module\Task\Dto\TaskCommentData;
+use App\Module\Task\Entity\Task;
 use App\Module\Task\Form\TaskCommentFormType;
-use App\Module\Main\Service\AuthenticatedUserProvider;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Module\Task\Service\TaskCommentService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,8 +20,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class TaskCommentController extends AbstractController
 {
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
-        private readonly AuthenticatedUserProvider $authenticatedUserProvider,
+        private readonly TaskCommentService $taskCommentService,
     ) {
     }
 
@@ -30,18 +28,16 @@ final class TaskCommentController extends AbstractController
     #[IsGranted(UserRole::ADMIN->value)]
     public function addComment(Task $task, Request $request): Response
     {
-        $comment = new TaskComment();
-        $form = $this->createForm(TaskCommentFormType::class, $comment);
+        $form = $this->createForm(TaskCommentFormType::class);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $comment->setTask($task);
-            $comment->setAuthor($this->authenticatedUserProvider->getUser());
+            /** @var TaskCommentData $data */
+            $data = $form->getData();
 
-            $this->entityManager->persist($comment);
-            $this->entityManager->flush();
+            $this->taskCommentService->addComment($task, $data);
 
-            $this->addFlash('success', 'Коментарий добавлен.');
+            $this->addFlash('success', 'Комментарий добавлен.');
         }
 
         return $this->redirectToRoute('task_show', ['id' => $task->getId()]);

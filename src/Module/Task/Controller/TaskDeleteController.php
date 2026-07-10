@@ -6,7 +6,6 @@ namespace App\Module\Task\Controller;
 
 use App\Module\Task\Enum\TaskRights;
 use App\Module\Main\Enum\UserRole;
-use App\Module\Task\Exception\TaskNotFoundException;
 use App\Module\Task\Service\TaskService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,12 +33,8 @@ final class TaskDeleteController extends AbstractController
             throw $this->createAccessDeniedException('Недействительный CSRF-токен.');
         }
 
-        try {
-            $this->taskService->deleteTask($id);
-            $this->addFlash('success', 'Задача успешно удалена.');
-        } catch (TaskNotFoundException $e) {
-            $this->addFlash('error', $e->getMessage());
-        }
+        $this->taskService->deleteTask($task);
+        $this->addFlash('success', 'Задача успешно удалена.');
 
         return $this->redirectToRoute('task_list');
     }
