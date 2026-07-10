@@ -32,7 +32,7 @@ final class TaskService
     ) {
     }
 
-    public function addTask(TaskData $data): void
+    public function addTask(TaskData $data): Task
     {
         $user = $this->getAuthenticatedUser();
 
@@ -55,11 +55,19 @@ final class TaskService
         $this->entityManager->flush();
 
         $this->dispatchTaskChangedForUser($user);
+
+        return $task;
     }
 
-    public function addSubtask(int $parentId, TaskData $data): void
+    public function addSubtask(int $parentId, TaskData $data): Task
     {
         $parent = $this->getTaskById($parentId);
+
+        return $this->addSubtaskToTask($parent, $data);
+    }
+
+    public function addSubtaskToTask(Task $parent, TaskData $data): Task
+    {
         $user = $this->getAuthenticatedUser();
 
         $priority = $this->resolvePriority($data->priority);
@@ -88,11 +96,19 @@ final class TaskService
         $this->entityManager->flush();
 
         $this->dispatchTaskChangedForUser($user);
+
+        return $subtask;
     }
 
-    public function updateTask(int $id, TaskData $data): void
+    public function updateTask(int $id, TaskData $data): Task
     {
         $task = $this->getTaskById($id);
+
+        return $this->updateTaskEntity($task, $data);
+    }
+
+    public function updateTaskEntity(Task $task, TaskData $data): Task
+    {
         $user = $task->getUser();
 
         $priority = $this->resolvePriority($data->priority);
@@ -119,9 +135,11 @@ final class TaskService
         $this->entityManager->flush();
 
         $this->dispatchTaskChangedForUser($user);
+
+        return $task;
     }
 
-    public function updateStatus(Task $task, TaskStatus $status): void
+    public function updateStatus(Task $task, TaskStatus $status): Task
     {
         $user = $task->getUser();
 
@@ -130,6 +148,8 @@ final class TaskService
         $this->entityManager->flush();
 
         $this->dispatchTaskChangedForUser($user);
+
+        return $task;
     }
 
     public function deleteTask(Task $task): void

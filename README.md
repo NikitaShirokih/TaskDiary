@@ -96,3 +96,18 @@ docker exec -it task_diary_php vendor/bin/phpstan analyse --no-progress
 ## Лицензия
 
 "proprietary".
+## REST API
+
+Первая версия API использует текущую session-auth Symfony, поэтому запросы к `/api/*` требуют авторизованного пользователя.
+
+Endpoints:
+
+- `GET /api/tasks`
+- `GET /api/tasks/{id}`
+- `POST /api/tasks`
+- `PUT /api/tasks/{id}`
+- `PATCH /api/tasks/{id}/status`
+- `DELETE /api/tasks/{id}`
+- `POST /api/tasks/{id}/subtasks`
+
+Все ответы API возвращаются в JSON.
