@@ -51,11 +51,16 @@ final readonly class TaskApiResponseFactory
     }
 
     /**
-     * @return array{error: string}
+     * @return array{error: array{message: string, code: int}}
      */
-    public function error(string $message): array
+    public function error(string $message, int $code): array
     {
-        return ['error' => $message];
+        return [
+            'error' => [
+                'message' => $message,
+                'code' => $code,
+            ],
+        ];
     }
 
     private function formatDate(?DateTimeInterface $dateTime): ?string

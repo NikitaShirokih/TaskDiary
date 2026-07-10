@@ -19,6 +19,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[IsGranted(UserRole::USER->value)]
@@ -58,7 +59,15 @@ final class TaskApiController extends AbstractController
 
             return $this->json(['data' => $this->responseFactory->task($task)]);
         } catch (TaskNotFoundException $e) {
-            return $this->json($this->responseFactory->error($e->getMessage()), Response::HTTP_NOT_FOUND);
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_NOT_FOUND),
+                Response::HTTP_NOT_FOUND,
+            );
+        } catch (AccessDeniedException $e) {
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_FORBIDDEN),
+                Response::HTTP_FORBIDDEN,
+            );
         }
     }
 
@@ -70,7 +79,15 @@ final class TaskApiController extends AbstractController
 
             return $this->json(['data' => $this->responseFactory->task($task)], Response::HTTP_CREATED);
         } catch (InvalidArgumentException|LogicException $e) {
-            return $this->json($this->responseFactory->error($e->getMessage()), Response::HTTP_BAD_REQUEST);
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_BAD_REQUEST),
+                Response::HTTP_BAD_REQUEST,
+            );
+        } catch (AccessDeniedException $e) {
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_FORBIDDEN),
+                Response::HTTP_FORBIDDEN,
+            );
         }
     }
 
@@ -85,9 +102,20 @@ final class TaskApiController extends AbstractController
 
             return $this->json(['data' => $this->responseFactory->task($updatedTask)]);
         } catch (TaskNotFoundException $e) {
-            return $this->json($this->responseFactory->error($e->getMessage()), Response::HTTP_NOT_FOUND);
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_NOT_FOUND),
+                Response::HTTP_NOT_FOUND,
+            );
         } catch (InvalidArgumentException|LogicException $e) {
-            return $this->json($this->responseFactory->error($e->getMessage()), Response::HTTP_BAD_REQUEST);
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_BAD_REQUEST),
+                Response::HTTP_BAD_REQUEST,
+            );
+        } catch (AccessDeniedException $e) {
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_FORBIDDEN),
+                Response::HTTP_FORBIDDEN,
+            );
         }
     }
 
@@ -102,9 +130,20 @@ final class TaskApiController extends AbstractController
 
             return $this->json(['data' => $this->responseFactory->task($updatedTask)]);
         } catch (TaskNotFoundException $e) {
-            return $this->json($this->responseFactory->error($e->getMessage()), Response::HTTP_NOT_FOUND);
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_NOT_FOUND),
+                Response::HTTP_NOT_FOUND,
+            );
         } catch (InvalidArgumentException|LogicException $e) {
-            return $this->json($this->responseFactory->error($e->getMessage()), Response::HTTP_BAD_REQUEST);
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_BAD_REQUEST),
+                Response::HTTP_BAD_REQUEST,
+            );
+        } catch (AccessDeniedException $e) {
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_FORBIDDEN),
+                Response::HTTP_FORBIDDEN,
+            );
         }
     }
 
@@ -117,9 +156,17 @@ final class TaskApiController extends AbstractController
 
             $this->taskService->deleteTask($task);
 
-            return $this->json(['message' => 'Задача удалена.']);
+            return $this->json(['data' => ['message' => 'Задача удалена.']]);
         } catch (TaskNotFoundException $e) {
-            return $this->json($this->responseFactory->error($e->getMessage()), Response::HTTP_NOT_FOUND);
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_NOT_FOUND),
+                Response::HTTP_NOT_FOUND,
+            );
+        } catch (AccessDeniedException $e) {
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_FORBIDDEN),
+                Response::HTTP_FORBIDDEN,
+            );
         }
     }
 
@@ -134,9 +181,20 @@ final class TaskApiController extends AbstractController
 
             return $this->json(['data' => $this->responseFactory->task($subtask)], Response::HTTP_CREATED);
         } catch (TaskNotFoundException $e) {
-            return $this->json($this->responseFactory->error($e->getMessage()), Response::HTTP_NOT_FOUND);
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_NOT_FOUND),
+                Response::HTTP_NOT_FOUND,
+            );
         } catch (InvalidArgumentException|LogicException $e) {
-            return $this->json($this->responseFactory->error($e->getMessage()), Response::HTTP_BAD_REQUEST);
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_BAD_REQUEST),
+                Response::HTTP_BAD_REQUEST,
+            );
+        } catch (AccessDeniedException $e) {
+            return $this->json(
+                $this->responseFactory->error($e->getMessage(), Response::HTTP_FORBIDDEN),
+                Response::HTTP_FORBIDDEN,
+            );
         }
     }
 }

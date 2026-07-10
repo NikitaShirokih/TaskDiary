@@ -93,21 +93,14 @@ docker exec -it task_diary_php php bin/console debug:router
 docker exec -it task_diary_php vendor/bin/phpstan analyse --no-progress
 ```
 
+## REST API
+
+REST API описан в `docs/api.md`.
+
+Первая версия API использует Symfony session-auth.
+API routes начинаются с `/api`.
+API возвращает JSON.
+
 ## Лицензия
 
 "proprietary".
-## REST API
-
-Первая версия API использует текущую session-auth Symfony, поэтому запросы к `/api/*` требуют авторизованного пользователя.
-
-Endpoints:
-
-- `GET /api/tasks`
-- `GET /api/tasks/{id}`
-- `POST /api/tasks`
-- `PUT /api/tasks/{id}`
-- `PATCH /api/tasks/{id}/status`
-- `DELETE /api/tasks/{id}`
-- `POST /api/tasks/{id}/subtasks`
-
-Все ответы API возвращаются в JSON.
