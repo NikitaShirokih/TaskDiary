@@ -44,6 +44,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $emailVerifiedAt = null;
 
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $passwordResetTokenHash = null;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $passwordResetTokenExpiresAt = null;
+
     /** @var Collection<int, Task> */
     #[ORM\OneToMany(targetEntity: Task::class, mappedBy: 'user', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $tasks;
@@ -175,6 +181,34 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         return $this->emailVerificationTokenExpiresAt !== null
             && $this->emailVerificationTokenExpiresAt <= $now;
+    }
+
+    public function requestPasswordReset(string $tokenHash, \DateTimeImmutable $expiresAt): void
+    {
+        $this->passwordResetTokenHash = $tokenHash;
+        $this->passwordResetTokenExpiresAt = $expiresAt;
+    }
+
+    public function clearPasswordResetToken(): void
+    {
+        $this->passwordResetTokenHash = null;
+        $this->passwordResetTokenExpiresAt = null;
+    }
+
+    public function getPasswordResetTokenHash(): ?string
+    {
+        return $this->passwordResetTokenHash;
+    }
+
+    public function getPasswordResetTokenExpiresAt(): ?\DateTimeImmutable
+    {
+        return $this->passwordResetTokenExpiresAt;
+    }
+
+    public function isPasswordResetTokenExpired(\DateTimeImmutable $now): bool
+    {
+        return $this->passwordResetTokenExpiresAt !== null
+            && $this->passwordResetTokenExpiresAt <= $now;
     }
 
     /** @return Collection<int, Task> */

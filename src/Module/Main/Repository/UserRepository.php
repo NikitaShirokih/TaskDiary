@@ -22,4 +22,18 @@ class UserRepository extends ServiceEntityRepository
             'emailVerificationToken' => $token,
         ]);
     }
+
+    public function findOneByEmail(string $email): ?User
+    {
+        return $this->findOneBy([
+            'email' => mb_strtolower(trim($email)),
+        ]);
+    }
+
+    public function findOneByPasswordResetTokenHash(string $tokenHash): ?User
+    {
+        return $this->findOneBy([
+            'passwordResetTokenHash' => $tokenHash,
+        ]);
+    }
 }

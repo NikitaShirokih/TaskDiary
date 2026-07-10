@@ -45,3 +45,7 @@ services:
     App\Module\Main\Service\RegistrationService:
         arguments:
             $appBaseUrl: '%env(APP_BASE_URL)%'
+
+    App\Module\Main\Service\PasswordResetService:
+        arguments:
+            $appBaseUrl: '%env(APP_BASE_URL)%'

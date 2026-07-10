@@ -53,6 +53,12 @@
                                    placeholder="••••••••">
                         </div>
 
+                        <p class="text-end mb-4" style="font-size: 14px;">
+                            <a href="{{ path('app_forgot_password') }}" class="text-primary fw-semibold text-decoration-none">
+                                Забыли пароль?
+                            </a>
+                        </p>
+
                         <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
 
                         <div class="d-grid">
