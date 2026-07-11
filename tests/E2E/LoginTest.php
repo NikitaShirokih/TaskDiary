@@ -30,6 +30,7 @@ class LoginTest extends PantherTestCase
         $user->setEmail('test@test.com');
         $user->setPassword($hasher->hashPassword($user, 'password'));
         $user->setRoles(['ROLE_USER']);
+        $user->verifyEmail(new \DateTimeImmutable());
 
         $em->persist($user);
         $em->flush();
