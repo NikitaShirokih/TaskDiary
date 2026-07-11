@@ -1,4 +1,6 @@
 {
+    "name": "nikita-shirokih/task-diary",
+    "description": "TaskDiary task management application",
     "type": "project",
     "license": "proprietary",
     "minimum-stability": "stable",
@@ -95,7 +97,7 @@
     "extra": {
         "symfony": {
             "allow-contrib": true,
-            "require": "^7.4"
+            "require": "7.3.*"
         }
     },
     "require-dev": {

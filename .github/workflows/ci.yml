@@ -2,37 +2,77 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - "**"
   pull_request:
-    branches: [ main ]
+    branches:
+      - "**"
 
 jobs:
-  ci:
+  tests:
     runs-on: ubuntu-latest
 
+    env:
+      APP_ENV: test
+      APP_SECRET: test_secret
+      APP_BASE_URL: http://localhost
+      DATABASE_URL: "postgresql://taskdiary:taskdiary@127.0.0.1:5432/taskdiary_test?serverVersion=15&charset=utf8"
+      REDIS_DSN: redis://127.0.0.1:6379
+      MAILER_DSN: "null://null"
+      MAIL_FROM_ADDRESS: no-reply@taskdiary.local
+      MAIL_FROM_NAME: TaskDiary
+      GIGACHAT_API_KEY: test_key
+      MESSENGER_TRANSPORT_DSN: sync://
+      DEFAULT_URI: http://localhost
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: taskdiary_test
+          POSTGRES_USER: taskdiary
+          POSTGRES_PASSWORD: taskdiary
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U taskdiary -d taskdiary_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: mbstring, xml, ctype, iconv, intl, pdo_pgsql
+          php-version: "8.3"
+          extensions: ctype, iconv, intl, mbstring, pdo, pdo_pgsql, pgsql, redis, xml, zip
           coverage: none
+          tools: composer:v2
 
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
+      - name: Validate composer
+        run: composer validate --strict
 
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress --no-interaction
 
-      - name: Run PHPStan
+      - name: Prepare test environment
+        run: |
+          php bin/console cache:clear --env=test
+          php bin/console doctrine:migrations:migrate --env=test --no-interaction
+
+      - name: Lint Symfony container
+        run: php bin/console lint:container --env=test
+
+      - name: PHPStan
         run: vendor/bin/phpstan analyse --no-progress
 
-      - name: Run PHP CS Fixer (check only)
-        run: vendor/bin/php-cs-fixer fix --dry-run --diff
+      - name: PHPUnit
+        run: vendor/bin/phpunit
