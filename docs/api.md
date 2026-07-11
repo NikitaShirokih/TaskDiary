@@ -16,11 +16,17 @@ REST API задач доступен по маршрутам `/api/*` и воз�
 
 ## Авторизация
 
-API использует текущую Symfony session-auth.
+REST API использует Bearer API token.
 
-Для работы с API пользователь должен быть авторизован через web-login. После входа браузер или HTTP-клиент отправляет session cookie, и API routes становятся доступны.
+Token создается в web-интерфейсе на странице `/profile/api-tokens`. Raw token показывается только один раз после создания. В базе хранится только hash token.
 
-В будущей версии можно добавить Bearer API tokens. В текущей версии Bearer tokens, JWT и API tokens не используются.
+Для API-запросов нужно передавать header:
+
+```http
+Authorization: Bearer td_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Отозванный token больше не работает. JWT, refresh tokens и OAuth в текущей версии не используются.
 
 ## Формат успешного ответа
 
@@ -134,7 +140,7 @@ Response `200`:
 
 Возможные ошибки:
 
-- `401 Unauthorized` или redirect на login, если пользователь не авторизован;
+- `401 Unauthorized`, если API token не передан, неверный или отозван;
 - `403 Forbidden`, если доступ запрещен.
 
 ### GET /api/tasks/{id}
@@ -375,24 +381,24 @@ Response `201`:
 
 ## Примеры curl
 
-Сначала нужно авторизоваться через web-login и сохранить session cookie:
+Сначала создайте token на странице `/profile/api-tokens`. Raw token показывается только один раз.
 
 ```bash
-curl -c cookies.txt -b cookies.txt -X POST http://localhost:8082/login \
-  --data-urlencode "_username=user@example.com" \
-  --data-urlencode "_password=password"
+API_TOKEN="td_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 ```
 
 Получить список задач:
 
 ```bash
-curl -b cookies.txt http://localhost:8082/api/tasks
+curl http://localhost:8082/api/tasks \
+  -H "Authorization: Bearer ${API_TOKEN}"
 ```
 
 Создать задачу:
 
 ```bash
-curl -b cookies.txt -H "Content-Type: application/json" \
+curl -H "Authorization: Bearer ${API_TOKEN}" \
+  -H "Content-Type: application/json" \
   -X POST http://localhost:8082/api/tasks \
   -d '{
     "title": "API задача",
@@ -406,7 +412,8 @@ curl -b cookies.txt -H "Content-Type: application/json" \
 Обновить задачу:
 
 ```bash
-curl -b cookies.txt -H "Content-Type: application/json" \
+curl -H "Authorization: Bearer ${API_TOKEN}" \
+  -H "Content-Type: application/json" \
   -X PUT http://localhost:8082/api/tasks/1 \
   -d '{
     "title": "Обновленная API задача",
@@ -420,7 +427,8 @@ curl -b cookies.txt -H "Content-Type: application/json" \
 Изменить статус:
 
 ```bash
-curl -b cookies.txt -H "Content-Type: application/json" \
+curl -H "Authorization: Bearer ${API_TOKEN}" \
+  -H "Content-Type: application/json" \
   -X PATCH http://localhost:8082/api/tasks/1/status \
   -d '{"status": "completed"}'
 ```
@@ -428,7 +436,8 @@ curl -b cookies.txt -H "Content-Type: application/json" \
 Создать подзадачу:
 
 ```bash
-curl -b cookies.txt -H "Content-Type: application/json" \
+curl -H "Authorization: Bearer ${API_TOKEN}" \
+  -H "Content-Type: application/json" \
   -X POST http://localhost:8082/api/tasks/1/subtasks \
   -d '{
     "title": "API подзадача",
@@ -440,7 +449,8 @@ curl -b cookies.txt -H "Content-Type: application/json" \
 Удалить задачу:
 
 ```bash
-curl -b cookies.txt -X DELETE http://localhost:8082/api/tasks/1
+curl -H "Authorization: Bearer ${API_TOKEN}" \
+  -X DELETE http://localhost:8082/api/tasks/1
 ```
 
 ## HTTP status codes
@@ -448,6 +458,6 @@ curl -b cookies.txt -X DELETE http://localhost:8082/api/tasks/1
 - `200 OK` - запрос выполнен успешно;
 - `201 Created` - задача или подзадача создана;
 - `400 Bad Request` - некорректный JSON или невалидные данные;
-- `401 Unauthorized` - пользователь не авторизован;
+- `401 Unauthorized` - API token не передан, неверный или отозван;
 - `403 Forbidden` - у пользователя нет доступа к действию;
 - `404 Not Found` - задача не найдена.

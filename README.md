@@ -97,7 +97,8 @@ docker exec -it task_diary_php vendor/bin/phpstan analyse --no-progress
 
 REST API описан в `docs/api.md`.
 
-Первая версия API использует Symfony session-auth.
+REST API использует Bearer API tokens.
+Создать token можно на странице `/profile/api-tokens`.
 API routes начинаются с `/api`.
 API возвращает JSON.
 

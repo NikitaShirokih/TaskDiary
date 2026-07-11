@@ -29,6 +29,9 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ path('task_list') }}">Задачи</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ path('profile_api_tokens_index') }}">API tokens</a>
+                    </li>
                     {% if is_granted('ROLE_ADMIN') %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ path('admin_panel') }}">Админка</a>

@@ -1,0 +1,91 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}API tokens{% endblock %}
+
+{% block body %}
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-1">API tokens</h1>
+            <p class="text-muted mb-0">Управление Bearer tokens для REST API.</p>
+        </div>
+    </div>
+
+    {% if created_token %}
+        <div class="alert alert-warning">
+            <div class="fw-semibold mb-2">
+                Скопируйте API token сейчас. После обновления страницы он больше не будет показан.
+            </div>
+            <code class="d-block bg-white border rounded p-3 text-break">{{ created_token }}</code>
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Создать token</h2>
+
+                    {{ form_start(form, { action: path('profile_api_tokens_create'), method: 'POST' }) }}
+                        {{ form_row(form.name, {
+                            attr: {
+                                placeholder: 'Например, Local API'
+                            }
+                        }) }}
+
+                        <button type="submit" class="btn btn-primary">
+                            Создать token
+                        </button>
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h5 mb-3">Активные tokens</h2>
+
+                    {% if tokens is empty %}
+                        <p class="text-muted mb-0">Активных API tokens пока нет.</p>
+                    {% else %}
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Название</th>
+                                        <th>Создан</th>
+                                        <th>Последнее использование</th>
+                                        <th class="text-end">Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for token in tokens %}
+                                        <tr>
+                                            <td>{{ token.name }}</td>
+                                            <td>{{ token.createdAt|date('d.m.Y H:i') }}</td>
+                                            <td>
+                                                {% if token.lastUsedAt %}
+                                                    {{ token.lastUsedAt|date('d.m.Y H:i') }}
+                                                {% else %}
+                                                    <span class="text-muted">Не использовался</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="text-end">
+                                                <form method="post" action="{{ path('profile_api_tokens_revoke', { id: token.id }) }}">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('api_token_revoke_' ~ token.id) }}">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                        Отозвать
+                                                    </button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
