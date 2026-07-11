@@ -30,6 +30,13 @@
 - AI-ассистент
 - Экспорт задач
 
+## Security
+
+- Email verification
+- Password reset
+- Bearer API tokens
+- Rate limiting for login, password reset and API
+
 ---
 
 Пример всех переменных — в файле `.env.local.example`

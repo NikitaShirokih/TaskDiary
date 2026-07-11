@@ -7,11 +7,13 @@ namespace App\Module\Main\Controller;
 use App\Module\Main\Exception\PasswordResetException;
 use App\Module\Main\Service\ForgotPasswordFormHandler;
 use App\Module\Main\Service\PasswordResetService;
+use App\Module\Main\Service\PasswordResetRateLimiter;
 use App\Module\Main\Service\ResetPasswordFormHandler;
 use RuntimeException;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 final class PasswordResetController extends AbstractController
@@ -22,6 +24,7 @@ final class PasswordResetController extends AbstractController
         private readonly ForgotPasswordFormHandler $forgotPasswordFormHandler,
         private readonly ResetPasswordFormHandler $resetPasswordFormHandler,
         private readonly PasswordResetService $passwordResetService,
+        private readonly PasswordResetRateLimiter $passwordResetRateLimiter,
     ) {
     }
 
@@ -36,7 +39,15 @@ final class PasswordResetController extends AbstractController
             ]);
         }
 
-        $this->passwordResetService->requestReset($result->data->email);
+        try {
+            $this->passwordResetRateLimiter->consumeForgotPassword($request, $result->data->email);
+            $this->passwordResetService->requestReset($result->data->email);
+        } catch (TooManyRequestsHttpException $e) {
+            $this->addFlash('error', $e->getMessage());
+
+            return $this->redirectToRoute('app_forgot_password');
+        }
+
         $this->addFlash('success', self::RESET_REQUESTED_MESSAGE);
 
         return $this->redirectToRoute('app_login');
@@ -62,10 +73,15 @@ final class PasswordResetController extends AbstractController
         }
 
         try {
+            $this->passwordResetRateLimiter->consumeResetPassword($request, $token);
             $this->passwordResetService->resetPassword($token, $result->data);
             $this->addFlash('success', 'Пароль успешно изменён. Теперь вы можете войти.');
 
             return $this->redirectToRoute('app_login');
+        } catch (TooManyRequestsHttpException $e) {
+            $this->addFlash('error', $e->getMessage());
+
+            return $this->redirectToRoute('app_forgot_password');
         } catch (PasswordResetException|RuntimeException $e) {
             $this->addFlash('error', $e->getMessage());
 

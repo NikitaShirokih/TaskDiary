@@ -28,6 +28,8 @@ security:
                 login_path: app_login
                 check_path: app_login
                 default_target_path: app_dashboard
+            login_throttling:
+                limiter: App\Module\Main\Security\LoginRateLimiter
             logout:
                 path: app_logout
                 target: app_login

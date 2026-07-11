@@ -49,3 +49,16 @@ services:
     App\Module\Main\Service\PasswordResetService:
         arguments:
             $appBaseUrl: '%env(APP_BASE_URL)%'
+
+    App\Module\Main\Security\LoginRateLimiter:
+        arguments:
+            $loginLimiter: '@limiter.login'
+
+    App\Module\Main\Service\PasswordResetRateLimiter:
+        arguments:
+            $forgotPasswordLimiter: '@limiter.forgot_password'
+            $resetPasswordLimiter: '@limiter.reset_password'
+
+    App\Module\Main\Security\ApiRateLimiter:
+        arguments:
+            $apiLimiter: '@limiter.api'
