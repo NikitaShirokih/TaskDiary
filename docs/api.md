@@ -1,127 +1,101 @@
 # TaskDiary REST API
 
-## Общая информация
+## Authentication
 
-REST API задач доступен по маршрутам `/api/*` и возвращает только JSON.
+Все `/api/*` endpoints требуют Bearer API token и возвращают JSON. Token создаётся авторизованным и подтверждённым пользователем в web UI на странице `/profile/api-tokens`.
 
-Первая версия API покрывает работу с задачами и подзадачами:
-
-- просмотр списка задач;
-- просмотр одной задачи;
-- создание задачи;
-- обновление задачи;
-- изменение статуса;
-- удаление задачи;
-- создание подзадачи.
-
-## Авторизация
-
-REST API использует Bearer API token.
-
-Token создается в web-интерфейсе на странице `/profile/api-tokens`. Raw token показывается только один раз после создания. В базе хранится только hash token.
-
-Для API-запросов нужно передавать header:
+Raw token с префиксом `td_` показывается только один раз. В базе хранится его SHA-256 hash; отозванный token больше не проходит authentication.
 
 ```http
-Authorization: Bearer td_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+Authorization: Bearer <token>
 ```
 
-Отозванный token больше не работает. JWT, refresh tokens и OAuth в текущей версии не используются.
+Пример запроса:
 
-## Формат успешного ответа
-
-Список возвращается в поле `data` как массив:
-
-```json
-{
-  "data": [
-    {
-      "id": 1,
-      "title": "API задача",
-      "description": "Создано через REST API",
-      "status": "waiting",
-      "priority": "medium",
-      "category": {
-        "id": 10,
-        "name": "Работа"
-      },
-      "parentId": null,
-      "startTime": null,
-      "endTime": null,
-      "createdAt": "2026-07-10T17:10:20+03:00",
-      "updatedAt": null
-    }
-  ]
-}
+```bash
+curl http://localhost:8082/api/tasks \
+  -H "Authorization: Bearer ${API_TOKEN}"
 ```
 
-Одна задача возвращается в поле `data` как объект:
+## Error format
 
-```json
-{
-  "data": {
-    "id": 1,
-    "title": "API задача",
-    "description": "Создано через REST API",
-    "status": "waiting",
-    "priority": "medium",
-    "category": {
-      "id": 10,
-      "name": "Работа"
-    },
-    "parentId": null,
-    "startTime": null,
-    "endTime": null,
-    "createdAt": "2026-07-10T17:10:20+03:00",
-    "updatedAt": null
-  }
-}
-```
-
-Удаление возвращает сообщение в поле `data`:
-
-```json
-{
-  "data": {
-    "message": "Задача удалена."
-  }
-}
-```
-
-## Формат ошибки
-
-Все ошибки API возвращаются в едином формате:
+Ошибки API имеют единый формат:
 
 ```json
 {
   "error": {
-    "message": "Некорректный JSON-запрос.",
+    "message": "Описание ошибки",
     "code": 400
+  }
+}
+```
+
+Отсутствующий или некорректный token:
+
+```json
+{
+  "error": {
+    "message": "Требуется API token.",
+    "code": 401
+  }
+}
+```
+
+Не найденная задача:
+
+```json
+{
+  "error": {
+    "message": "Задача #42 не найдена.",
+    "code": 404
+  }
+}
+```
+
+Основные коды ответа:
+
+- `200 OK` — запрос выполнен;
+- `201 Created` — задача или подзадача создана;
+- `400 Bad Request` — некорректный JSON или входные данные;
+- `401 Unauthorized` — token отсутствует, неверен или отозван;
+- `403 Forbidden` — операция над задачей запрещена;
+- `404 Not Found` — задача не найдена;
+- `429 Too Many Requests` — исчерпан rate limit.
+
+## Rate limits
+
+Для `/api/*` действует sliding window: 60 запросов в минуту. До завершения authentication лимит привязывается к IP-адресу, для аутентифицированного запроса — к пользователю. При превышении лимита возвращается `429`:
+
+```json
+{
+  "error": {
+    "message": "Слишком много API-запросов. Попробуйте позже.",
+    "code": 429
   }
 }
 ```
 
 ## Endpoints
 
+Все endpoints ниже требуют заголовок `Authorization: Bearer <token>`.
+
 ### GET /api/tasks
 
-Возвращает список задач текущего пользователя.
+Возвращает `200 OK` и список задач текущего пользователя в `data`.
 
 Query parameters:
 
-- `view` - представление списка, по умолчанию `active`;
-- `category` - id категории;
-- `priority` - приоритет: `low`, `medium`, `high`.
-
-Response `200`:
+- `view` — представление списка, по умолчанию `active`;
+- `category` — числовой id категории;
+- `priority` — `low`, `medium` или `high`.
 
 ```json
 {
   "data": [
     {
       "id": 1,
-      "title": "API задача",
-      "description": "Создано через REST API",
+      "title": "Подготовить отчёт",
+      "description": "Собрать данные и отправить руководителю",
       "status": "waiting",
       "priority": "medium",
       "category": {
@@ -138,23 +112,18 @@ Response `200`:
 }
 ```
 
-Возможные ошибки:
-
-- `401 Unauthorized`, если API token не передан, неверный или отозван;
-- `403 Forbidden`, если доступ запрещен.
+Возможные ошибки: `401`, `403`, `429`.
 
 ### GET /api/tasks/{id}
 
-Возвращает одну задачу по id.
-
-Response `200`:
+Возвращает `200 OK` и принадлежащую пользователю задачу в `data`.
 
 ```json
 {
   "data": {
     "id": 1,
-    "title": "API задача",
-    "description": "Создано через REST API",
+    "title": "Подготовить отчёт",
+    "description": "Собрать данные и отправить руководителю",
     "status": "waiting",
     "priority": "medium",
     "category": {
@@ -170,21 +139,18 @@ Response `200`:
 }
 ```
 
-Возможные ошибки:
-
-- `404 Not Found`, если задача не найдена;
-- `403 Forbidden`, если нет доступа к задаче.
+Возможные ошибки: `401`, `403` при отсутствии доступа, `404` если задача не существует, `429`.
 
 ### POST /api/tasks
 
-Создает задачу.
+Создаёт задачу и возвращает `201 Created` с созданным объектом в `data`.
 
 Request body:
 
 ```json
 {
-  "title": "API задача",
-  "description": "Создано через REST API",
+  "title": "Подготовить отчёт",
+  "description": "Собрать данные и отправить руководителю",
   "priority": "medium",
   "status": "waiting",
   "categoryName": "Работа",
@@ -193,137 +159,50 @@ Request body:
 }
 ```
 
-Поля:
+Поля request body:
 
-- `title` - обязательное название задачи;
-- `description` - описание, опционально;
-- `priority` - `low`, `medium`, `high`; по умолчанию `medium`;
-- `status` - `waiting`, `in_progress`, `completed`; по умолчанию `waiting`;
-- `categoryName` - название категории для основной задачи;
-- `startTime` - дата начала, опционально;
-- `endTime` - дата окончания, опционально.
+- `title` — обязательная непустая строка;
+- `description` — необязательная строка;
+- `priority` — `low`, `medium`, `high`; по умолчанию `medium`;
+- `status` — `waiting`, `in_progress`, `completed`; по умолчанию `waiting`;
+- `categoryName` — название категории, необязательное;
+- `startTime`, `endTime` — необязательные даты, принимаемые `DateTimeImmutable`.
 
-Response `201`:
-
-```json
-{
-  "data": {
-    "id": 1,
-    "title": "API задача",
-    "description": "Создано через REST API",
-    "status": "waiting",
-    "priority": "medium",
-    "category": {
-      "id": 10,
-      "name": "Работа"
-    },
-    "parentId": null,
-    "startTime": "2026-07-10T09:00:00+03:00",
-    "endTime": "2026-07-10T18:00:00+03:00",
-    "createdAt": "2026-07-10T17:10:20+03:00",
-    "updatedAt": null
-  }
-}
-```
-
-Возможные ошибки:
-
-- `400 Bad Request`, если JSON некорректный или данные не прошли валидацию;
-- `403 Forbidden`, если пользователь не может создать задачу.
+Успешный ответ имеет тот же объект задачи, что и `GET /api/tasks/{id}`. Возможные ошибки: `400` при некорректном JSON, enum или дате, `401`, `403`, `429`.
 
 ### PUT /api/tasks/{id}
 
-Обновляет задачу.
-
-Request body:
+Обновляет задачу и возвращает `200 OK` с обновлённым объектом в `data`. Request body имеет ту же структуру, что `POST /api/tasks`; для отсутствующих `priority` и `status` используются значения по умолчанию.
 
 ```json
 {
-  "title": "Обновленная API задача",
-  "description": "Новое описание",
+  "title": "Обновлённый отчёт",
+  "description": "Добавить финальные цифры",
   "priority": "high",
   "status": "in_progress",
   "categoryName": "Работа",
   "startTime": "2026-07-10T09:00:00+03:00",
-  "endTime": "2026-07-10T18:00:00+03:00"
+  "endTime": "2026-07-10T19:00:00+03:00"
 }
 ```
 
-Response `200`:
-
-```json
-{
-  "data": {
-    "id": 1,
-    "title": "Обновленная API задача",
-    "description": "Новое описание",
-    "status": "in_progress",
-    "priority": "high",
-    "category": {
-      "id": 10,
-      "name": "Работа"
-    },
-    "parentId": null,
-    "startTime": "2026-07-10T09:00:00+03:00",
-    "endTime": "2026-07-10T18:00:00+03:00",
-    "createdAt": "2026-07-10T17:10:20+03:00",
-    "updatedAt": "2026-07-10T17:15:00+03:00"
-  }
-}
-```
-
-Возможные ошибки:
-
-- `400 Bad Request`, если JSON некорректный или данные не прошли валидацию;
-- `403 Forbidden`, если нет права редактировать задачу;
-- `404 Not Found`, если задача не найдена.
+Возможные ошибки: `400`, `401`, `403`, `404`, `429`.
 
 ### PATCH /api/tasks/{id}/status
 
-Обновляет только статус задачи.
-
-Request body:
+Изменяет только статус задачи и возвращает `200 OK` с обновлённым объектом в `data`.
 
 ```json
 {
-  "status": "in_progress"
+  "status": "completed"
 }
 ```
 
-Response `200`:
-
-```json
-{
-  "data": {
-    "id": 1,
-    "title": "API задача",
-    "description": "Создано через REST API",
-    "status": "in_progress",
-    "priority": "medium",
-    "category": {
-      "id": 10,
-      "name": "Работа"
-    },
-    "parentId": null,
-    "startTime": null,
-    "endTime": null,
-    "createdAt": "2026-07-10T17:10:20+03:00",
-    "updatedAt": "2026-07-10T17:15:00+03:00"
-  }
-}
-```
-
-Возможные ошибки:
-
-- `400 Bad Request`, если JSON некорректный или статус невалидный;
-- `403 Forbidden`, если нет права редактировать задачу;
-- `404 Not Found`, если задача не найдена.
+Допустимые значения: `waiting`, `in_progress`, `completed`. Возможные ошибки: `400` при отсутствующем или некорректном статусе, `401`, `403`, `404`, `429`.
 
 ### DELETE /api/tasks/{id}
 
-Удаляет задачу.
-
-Response `200`:
+Удаляет задачу и возвращает `200 OK`:
 
 ```json
 {
@@ -333,36 +212,31 @@ Response `200`:
 }
 ```
 
-Возможные ошибки:
-
-- `403 Forbidden`, если нет права удалить задачу;
-- `404 Not Found`, если задача не найдена.
+Возможные ошибки: `401`, `403`, `404`, `429`.
 
 ### POST /api/tasks/{id}/subtasks
 
-Создает подзадачу у задачи `{id}`.
-
-Request body:
+Создаёт подзадачу у родительской задачи `{id}` и возвращает `201 Created`. Подзадача не получает отдельную категорию, поэтому `category` в ответе равен `null`.
 
 ```json
 {
-  "title": "API подзадача",
-  "description": "Описание подзадачи",
-  "priority": "low",
+  "title": "Проверить цифры",
+  "description": "Сверить значения с источником",
+  "priority": "high",
   "status": "waiting"
 }
 ```
 
-Response `201`:
+Response:
 
 ```json
 {
   "data": {
     "id": 2,
-    "title": "API подзадача",
-    "description": "Описание подзадачи",
+    "title": "Проверить цифры",
+    "description": "Сверить значения с источником",
     "status": "waiting",
-    "priority": "low",
+    "priority": "high",
     "category": null,
     "parentId": 1,
     "startTime": null,
@@ -373,15 +247,11 @@ Response `201`:
 }
 ```
 
-Возможные ошибки:
+Возможные ошибки: `400`, `401`, `403`, `404`, `429`.
 
-- `400 Bad Request`, если JSON некорректный или данные не прошли валидацию;
-- `403 Forbidden`, если нет права редактировать родительскую задачу;
-- `404 Not Found`, если родительская задача не найдена.
+## Examples
 
-## Примеры curl
-
-Сначала создайте token на странице `/profile/api-tokens`. Raw token показывается только один раз.
+Сначала создайте token на `/profile/api-tokens` и сохраните показанное значение:
 
 ```bash
 API_TOKEN="td_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
@@ -397,29 +267,14 @@ curl http://localhost:8082/api/tasks \
 Создать задачу:
 
 ```bash
-curl -H "Authorization: Bearer ${API_TOKEN}" \
+curl http://localhost:8082/api/tasks \
+  -X POST \
+  -H "Authorization: Bearer ${API_TOKEN}" \
   -H "Content-Type: application/json" \
-  -X POST http://localhost:8082/api/tasks \
   -d '{
-    "title": "API задача",
-    "description": "Создано через REST API",
+    "title": "Подготовить отчёт",
+    "description": "Собрать данные и отправить руководителю",
     "priority": "medium",
-    "status": "waiting",
-    "categoryName": "Работа"
-  }'
-```
-
-Обновить задачу:
-
-```bash
-curl -H "Authorization: Bearer ${API_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -X PUT http://localhost:8082/api/tasks/1 \
-  -d '{
-    "title": "Обновленная API задача",
-    "description": "Новое описание",
-    "priority": "high",
-    "status": "in_progress",
     "categoryName": "Работа"
   }'
 ```
@@ -427,37 +282,30 @@ curl -H "Authorization: Bearer ${API_TOKEN}" \
 Изменить статус:
 
 ```bash
-curl -H "Authorization: Bearer ${API_TOKEN}" \
+curl http://localhost:8082/api/tasks/1/status \
+  -X PATCH \
+  -H "Authorization: Bearer ${API_TOKEN}" \
   -H "Content-Type: application/json" \
-  -X PATCH http://localhost:8082/api/tasks/1/status \
-  -d '{"status": "completed"}'
+  -d '{"status":"completed"}'
 ```
 
 Создать подзадачу:
 
 ```bash
-curl -H "Authorization: Bearer ${API_TOKEN}" \
+curl http://localhost:8082/api/tasks/1/subtasks \
+  -X POST \
+  -H "Authorization: Bearer ${API_TOKEN}" \
   -H "Content-Type: application/json" \
-  -X POST http://localhost:8082/api/tasks/1/subtasks \
   -d '{
-    "title": "API подзадача",
-    "priority": "low",
-    "status": "waiting"
+    "title": "Проверить цифры",
+    "priority": "high"
   }'
 ```
 
 Удалить задачу:
 
 ```bash
-curl -H "Authorization: Bearer ${API_TOKEN}" \
-  -X DELETE http://localhost:8082/api/tasks/1
+curl http://localhost:8082/api/tasks/1 \
+  -X DELETE \
+  -H "Authorization: Bearer ${API_TOKEN}"
 ```
-
-## HTTP status codes
-
-- `200 OK` - запрос выполнен успешно;
-- `201 Created` - задача или подзадача создана;
-- `400 Bad Request` - некорректный JSON или невалидные данные;
-- `401 Unauthorized` - API token не передан, неверный или отозван;
-- `403 Forbidden` - у пользователя нет доступа к действию;
-- `404 Not Found` - задача не найдена.

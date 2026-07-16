@@ -47,10 +47,10 @@ class TaskExportService
      *
      * @return array<int, array<string, mixed>>
      */
-    public function exportTasks(Task $task, array $tasks): array
+    public function exportTasks(array $tasks): array
     {
         return array_map(
-            fn (Task $task) => $this->serializeTask($task),
+            fn (Task $task): array => $this->serializeTask($task),
             $tasks
         );
     }

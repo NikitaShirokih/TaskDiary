@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Service;
 
+use App\Module\Main\Entity\User;
+use App\Module\Main\Service\AuthenticatedUserProvider;
 use App\Module\Task\Dto\TaskData;
 use App\Module\Task\Entity\Category;
 use App\Module\Task\Entity\Task;
-use App\Module\Main\Entity\User;
 use App\Module\Task\Enum\TaskPriority;
 use App\Module\Task\Enum\TaskStatus;
 use App\Module\Task\Exception\TaskNotFoundException;
 use App\Module\Task\Repository\CategoryRepository;
 use App\Module\Task\Repository\TaskRepository;
+use App\Module\Task\Service\TaskCategoryResolver;
 use App\Module\Task\Service\TaskService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -23,17 +25,21 @@ final class TaskServiceTest extends TestCase
 {
     private function makeService(
         ?EntityManagerInterface $entityManager = null,
-        ?Security               $security = null,
+        ?AuthenticatedUserProvider $authenticatedUserProvider = null,
         ?CategoryRepository     $categoryRepository = null,
+        ?TaskCategoryResolver   $taskCategoryResolver = null,
         ?TaskRepository         $taskRepository = null,
         ?EventDispatcherInterface $eventDispatcher = null,
     ): TaskService
     {
+        $entityManager ??= $this->createStub(EntityManagerInterface::class);
+        $categoryRepository ??= $this->makeCategoryRepositoryWithDefaultCategory();
+
         return new TaskService(
-            $entityManager ?? $this->createStub(EntityManagerInterface::class),
-            $categoryRepository ?? $this->makeCategoryRepositoryWithDefaultCategory(),
+            $entityManager,
+            $taskCategoryResolver ?? new TaskCategoryResolver($categoryRepository, $entityManager),
             $taskRepository ?? $this->createStub(TaskRepository::class),
-            $security ?? $this->createStub(Security::class),
+            $authenticatedUserProvider ?? $this->makeAuthenticatedUserProvider(),
             $eventDispatcher ?? $this->createStub(EventDispatcherInterface::class),
         );
     }
@@ -69,12 +75,12 @@ final class TaskServiceTest extends TestCase
         return $categoryRepository;
     }
 
-    private function makeSecurityWithUser(?User $user = null): Security
+    private function makeAuthenticatedUserProvider(?User $user = null): AuthenticatedUserProvider
     {
         $security = $this->createStub(Security::class);
         $security->method('getUser')->willReturn($user ?? $this->makeUser());
 
-        return $security;
+        return new AuthenticatedUserProvider($security);
     }
 
     private function makeUser(): User
@@ -97,7 +103,7 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $this->makeSecurityWithUser(),
+            authenticatedUserProvider: $this->makeAuthenticatedUserProvider(),
         );
 
         $service->addTask($this->makeData(title: 'Моя задача'));
@@ -115,7 +121,7 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $this->makeSecurityWithUser(),
+            authenticatedUserProvider: $this->makeAuthenticatedUserProvider(),
         );
 
         $service->addTask($this->makeData(title: '   Обрезанный заголовок   '));
@@ -142,7 +148,7 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $this->makeSecurityWithUser($user),
+            authenticatedUserProvider: $this->makeAuthenticatedUserProvider($user),
             categoryRepository: $categoryRepo,
         );
 
@@ -165,7 +171,7 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $this->makeSecurityWithUser(),
+            authenticatedUserProvider: $this->makeAuthenticatedUserProvider(),
             categoryRepository: $categoryRepo,
         );
 
@@ -180,7 +186,7 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $this->makeSecurityWithUser(),
+            authenticatedUserProvider: $this->makeAuthenticatedUserProvider(),
         );
 
         $this->expectException(\RuntimeException::class);
@@ -191,8 +197,7 @@ final class TaskServiceTest extends TestCase
     public function testAddSubtaskPersistsSubtaskWithParent(): void
     {
         $user = $this->makeUser();
-        $security = $this->createStub(Security::class);
-        $security->method('getUser')->willReturn($user);
+        $authenticatedUserProvider = $this->makeAuthenticatedUserProvider($user);
 
         $parent = Task::create(user: $user, title: 'Родитель');
 
@@ -209,7 +214,7 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $security,
+            authenticatedUserProvider: $authenticatedUserProvider,
             taskRepository: $taskRepo,
         );
 
@@ -226,7 +231,7 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $this->makeSecurityWithUser(),
+            authenticatedUserProvider: $this->makeAuthenticatedUserProvider(),
             taskRepository: $taskRepo,
         );
 
@@ -238,8 +243,7 @@ final class TaskServiceTest extends TestCase
     public function testAddSubtaskTrimsTitleWhitespace(): void
     {
         $user = $this->makeUser();
-        $security = $this->createStub(Security::class);
-        $security->method('getUser')->willReturn($user);
+        $authenticatedUserProvider = $this->makeAuthenticatedUserProvider($user);
 
         $parent = Task::create(user: $user, title: 'Родитель');
 
@@ -256,7 +260,7 @@ final class TaskServiceTest extends TestCase
 
         $service = $this->makeService(
             entityManager: $em,
-            security: $security,
+            authenticatedUserProvider: $authenticatedUserProvider,
             taskRepository: $taskRepo,
         );
 

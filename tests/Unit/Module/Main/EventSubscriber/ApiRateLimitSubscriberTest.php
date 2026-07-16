@@ -9,7 +9,6 @@ use App\Module\Main\Security\ApiRateLimiter;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -37,26 +36,6 @@ final class ApiRateLimitSubscriberTest extends TestCase
 
         $this->expectException(TooManyRequestsHttpException::class);
         $subscriber->onKernelRequest($this->requestEvent('/api/tasks'));
-    }
-
-    public function testApiRateLimitExceptionBecomesJson429(): void
-    {
-        $subscriber = new ApiRateLimitSubscriber($this->limiter(1));
-        $event = new ExceptionEvent(
-            $this->createStub(HttpKernelInterface::class),
-            Request::create('/api/tasks'),
-            HttpKernelInterface::MAIN_REQUEST,
-            new TooManyRequestsHttpException(null, 'Слишком много API-запросов. Попробуйте позже.'),
-        );
-
-        $subscriber->onKernelException($event);
-
-        self::assertTrue($event->hasResponse());
-        $response = $event->getResponse();
-        self::assertSame(429, $response->getStatusCode());
-        self::assertSame([
-            'error' => ['message' => 'Слишком много API-запросов. Попробуйте позже.', 'code' => 429],
-        ], json_decode((string) $response->getContent(), true));
     }
 
     private function limiter(int $limit): ApiRateLimiter

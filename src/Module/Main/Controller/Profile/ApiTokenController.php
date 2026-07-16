@@ -4,9 +4,8 @@ declare(strict_types=1);
 
 namespace App\Module\Main\Controller\Profile;
 
-use App\Module\Main\Dto\ApiTokenData;
 use App\Module\Main\Enum\UserRole;
-use App\Module\Main\Form\ApiTokenFormType;
+use App\Module\Main\Service\ApiTokenFormHandler;
 use App\Module\Main\Service\ApiTokenService;
 use App\Module\Main\Service\AuthenticatedUserProvider;
 use InvalidArgumentException;
@@ -23,6 +22,7 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 final class ApiTokenController extends AbstractController
 {
     public function __construct(
+        private readonly ApiTokenFormHandler $apiTokenFormHandler,
         private readonly ApiTokenService $apiTokenService,
         private readonly AuthenticatedUserProvider $authenticatedUserProvider,
     ) {
@@ -31,33 +31,34 @@ final class ApiTokenController extends AbstractController
     #[Route('', name: 'index', methods: ['GET'])]
     public function index(): Response
     {
-        return $this->renderPage(new ApiTokenData());
+        return $this->renderPage($this->apiTokenFormHandler->createEmptyResult()->formView);
     }
 
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): Response
     {
-        $data = new ApiTokenData();
-        $form = $this->createForm(ApiTokenFormType::class, $data);
-        $form->handleRequest($request);
+        $formResult = $this->apiTokenFormHandler->handle($request);
         $createdToken = null;
 
-        if ($form->isSubmitted() && $form->isValid()) {
+        if ($formResult->isSubmitted && $formResult->isValid) {
             try {
                 $result = $this->apiTokenService->createToken(
                     $this->authenticatedUserProvider->getUser(),
-                    $data->name,
+                    $formResult->data->name,
                 );
                 $createdToken = $result->plainToken;
-                $data = new ApiTokenData();
-                $form = $this->createForm(ApiTokenFormType::class, $data);
+                $formResult = $this->apiTokenFormHandler->createEmptyResult();
                 $this->addFlash('success', 'API token создан.');
             } catch (InvalidArgumentException $e) {
                 $this->addFlash('error', $e->getMessage());
             }
         }
 
-        return $this->renderPage($data, $createdToken, $form->createView());
+        foreach ($formResult->errors as $error) {
+            $this->addFlash('error', $error);
+        }
+
+        return $this->renderPage($formResult->formView, $createdToken);
     }
 
     #[Route('/{id<\d+>}/revoke', name: 'revoke', methods: ['POST'])]
@@ -79,10 +80,9 @@ final class ApiTokenController extends AbstractController
         return $this->redirectToRoute('profile_api_tokens_index');
     }
 
-    private function renderPage(ApiTokenData $data, ?string $createdToken = null, ?FormView $formView = null): Response
+    private function renderPage(FormView $formView, ?string $createdToken = null): Response
     {
         $user = $this->authenticatedUserProvider->getUser();
-        $formView ??= $this->createForm(ApiTokenFormType::class, $data)->createView();
 
         return $this->render('profile/api_tokens.html.twig', [
             'form' => $formView,

@@ -4,41 +4,42 @@ declare(strict_types=1);
 
 namespace App\Module\Task\Service;
 
+use App\Module\Main\Entity\User;
+use App\Module\Main\Service\AuthenticatedUserProvider;
 use App\Module\Task\Dto\TaskData;
-use App\Module\Task\Entity\Category;
 use App\Module\Task\Entity\Task;
 use App\Module\Task\Event\TaskChangedEvent;
-use App\Module\Main\Entity\User;
 use App\Module\Task\Enum\TaskPriority;
 use App\Module\Task\Enum\TaskStatus;
 use App\Module\Task\Exception\TaskNotFoundException;
-use App\Module\Task\Repository\CategoryRepository;
 use App\Module\Task\Repository\TaskRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use InvalidArgumentException;
-use RuntimeException;
-use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 
 final class TaskService
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly CategoryRepository $categoryRepository,
+        private readonly TaskCategoryResolver $taskCategoryResolver,
         private readonly TaskRepository $taskRepository,
-        private readonly Security $security,
+        private readonly AuthenticatedUserProvider $authenticatedUserProvider,
         private readonly EventDispatcherInterface $eventDispatcher,
     ) {
     }
 
     public function addTask(TaskData $data): Task
     {
-        $user = $this->getAuthenticatedUser();
+        $user = $this->authenticatedUserProvider->getUser();
 
-        $category = $this->resolveOrCreateCategory($user, $data->categoryName);
-        $priority = $this->resolvePriority($data->priority);
-        $status = $this->resolveStatus($data->status);
+        $category = $this->taskCategoryResolver->resolveForUser($user, $data->categoryName);
+        $priority = TaskPriority::fromInput(
+            $data->priority,
+            sprintf('Некорректный приоритет: "%s".', $data->priority),
+        );
+        $status = TaskStatus::fromInput(
+            $data->status,
+            sprintf('Некорректный статус: "%s".', $data->status),
+        );
 
         $task = Task::create(
             user: $user,
@@ -68,10 +69,16 @@ final class TaskService
 
     public function addSubtaskToTask(Task $parent, TaskData $data): Task
     {
-        $user = $this->getAuthenticatedUser();
+        $user = $this->authenticatedUserProvider->getUser();
 
-        $priority = $this->resolvePriority($data->priority);
-        $status = $this->resolveStatus($data->status);
+        $priority = TaskPriority::fromInput(
+            $data->priority,
+            sprintf('Некорректный приоритет: "%s".', $data->priority),
+        );
+        $status = TaskStatus::fromInput(
+            $data->status,
+            sprintf('Некорректный статус: "%s".', $data->status),
+        );
 
         $subtask = Task::createSubtask(
             parent: $parent,
@@ -111,8 +118,14 @@ final class TaskService
     {
         $user = $task->getUser();
 
-        $priority = $this->resolvePriority($data->priority);
-        $status = $this->resolveStatus($data->status);
+        $priority = TaskPriority::fromInput(
+            $data->priority,
+            sprintf('Некорректный приоритет: "%s".', $data->priority),
+        );
+        $status = TaskStatus::fromInput(
+            $data->status,
+            sprintf('Некорректный статус: "%s".', $data->status),
+        );
 
         $task->rename(trim($data->title));
         $task->describe($data->description);
@@ -126,7 +139,7 @@ final class TaskService
              */
             $task->assignCategory(null);
         } else {
-            $category = $this->resolveOrCreateCategory($user, $data->categoryName);
+            $category = $this->taskCategoryResolver->resolveForUser($user, $data->categoryName);
 
             $task->assignCategory($category);
             $task->schedule($data->startTime, $data->endTime);
@@ -168,17 +181,6 @@ final class TaskService
             ?? throw new TaskNotFoundException(sprintf('Задача #%d не найдена.', $id));
     }
 
-    private function getAuthenticatedUser(): User
-    {
-        $user = $this->security->getUser();
-
-        if (!$user instanceof User) {
-            throw new AccessDeniedException('User is not authenticated.');
-        }
-
-        return $user;
-    }
-
     private function dispatchTaskChangedForUser(User $user): void
     {
         $userId = $user->getId();
@@ -190,49 +192,8 @@ final class TaskService
         $this->eventDispatcher->dispatch(new TaskChangedEvent($userId));
     }
 
-    private function resolveOrCreateCategory(User $user, string $categoryName): Category
-    {
-        $name = trim($categoryName);
-
-        if ('' === $name) {
-            throw new RuntimeException('Для основной задачи необходимо выбрать категорию.');
-        }
-
-        $category = $this->categoryRepository->findOneByUserAndName($user, $name);
-
-        if ($category instanceof Category) {
-            return $category;
-        }
-
-        $category = new Category($user);
-        $category->setName($name);
-        $category->setColor('#3498db');
-        $category->setIcon(null);
-        $category->setDescription(null);
-
-        $this->entityManager->persist($category);
-
-        return $category;
-    }
-
-    private function resolvePriority(string $priority): TaskPriority
-    {
-        return TaskPriority::tryFrom($priority)
-            ?? throw new InvalidArgumentException(sprintf('Некорректный приоритет: "%s".', $priority));
-    }
-
-    private function resolveStatus(string $status): TaskStatus
-    {
-        return TaskStatus::tryFrom($status)
-            ?? throw new InvalidArgumentException(sprintf('Некорректный статус: "%s".', $status));
-    }
-
     private function applyStatus(Task $task, TaskStatus $status): void
     {
-        match ($status) {
-            TaskStatus::InProgress => $task->start(),
-            TaskStatus::Completed => $task->complete(),
-            TaskStatus::Waiting => $task->reopen(),
-        };
+        $task->changeStatus($status);
     }
 }

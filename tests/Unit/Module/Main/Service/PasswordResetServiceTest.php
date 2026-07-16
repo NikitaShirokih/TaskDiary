@@ -8,6 +8,7 @@ use App\Module\Main\Dto\ResetPasswordData;
 use App\Module\Main\Entity\User;
 use App\Module\Main\Exception\PasswordResetException;
 use App\Module\Main\Repository\UserRepository;
+use App\Module\Main\Security\SecureTokenGenerator;
 use App\Module\Main\Service\PasswordResetService;
 use App\Module\Main\Service\UserMailer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -93,6 +94,22 @@ final class PasswordResetServiceTest extends TestCase
         $this->service($repository)->assertTokenCanBeUsed('unknown');
     }
 
+    public function testInvalidTokenDoesNotChangePasswordOrFlush(): void
+    {
+        $repository = $this->createStub(UserRepository::class);
+        $repository->method('findOneByPasswordResetTokenHash')->willReturn(null);
+        $hasher = $this->createMock(UserPasswordHasherInterface::class);
+        $hasher->expects($this->never())->method('hashPassword');
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->expects($this->never())->method('flush');
+        $data = new ResetPasswordData();
+        $data->plainPassword = 'new-password';
+
+        $this->expectException(PasswordResetException::class);
+
+        $this->service($repository, $entityManager, $hasher)->resetPassword('invalid', $data);
+    }
+
     public function testExpiredTokenIsRejected(): void
     {
         $user = $this->verifiedUser();
@@ -119,6 +136,7 @@ final class PasswordResetServiceTest extends TestCase
             $entityManager ?? $this->createStub(EntityManagerInterface::class),
             $hasher ?? $this->createStub(UserPasswordHasherInterface::class),
             $userMailer,
+            new SecureTokenGenerator(),
             'https://taskdiary.test',
         );
     }

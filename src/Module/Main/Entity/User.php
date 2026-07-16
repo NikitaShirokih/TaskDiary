@@ -148,9 +148,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this->isVerified;
     }
 
-    public function requestEmailVerification(string $token, \DateTimeImmutable $expiresAt): void
+    public function requestEmailVerification(string $tokenHash, \DateTimeImmutable $expiresAt): void
     {
-        $this->emailVerificationToken = $token;
+        $this->emailVerificationToken = $tokenHash;
         $this->emailVerificationTokenExpiresAt = $expiresAt;
     }
 
@@ -162,7 +162,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->emailVerificationTokenExpiresAt = null;
     }
 
-    public function getEmailVerificationToken(): ?string
+    public function getEmailVerificationTokenHash(): ?string
     {
         return $this->emailVerificationToken;
     }

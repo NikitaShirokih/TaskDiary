@@ -6,6 +6,7 @@ namespace App\Module\Main\Service;
 
 use App\Module\Main\Entity\User;
 use App\Module\Main\Repository\UserRepository;
+use App\Module\Main\Security\SecureTokenGenerator;
 use Doctrine\ORM\EntityManagerInterface;
 use RuntimeException;
 
@@ -16,30 +17,34 @@ final readonly class EmailVerificationService
     public function __construct(
         private UserRepository $userRepository,
         private EntityManagerInterface $entityManager,
+        private SecureTokenGenerator $secureTokenGenerator,
     ) {
     }
 
     public function requestVerification(User $user): string
     {
-        $token = bin2hex(random_bytes(32));
+        $rawToken = $this->secureTokenGenerator->generateRawToken();
+        $tokenHash = $this->secureTokenGenerator->hashToken($rawToken);
         $expiresAt = new \DateTimeImmutable(sprintf('+%d hours', self::TOKEN_TTL_HOURS));
 
-        $user->requestEmailVerification($token, $expiresAt);
+        $user->requestEmailVerification($tokenHash, $expiresAt);
 
         $this->entityManager->flush();
 
-        return $token;
+        return $rawToken;
     }
 
-    public function verify(string $token): User
+    public function verify(string $rawToken): User
     {
-        $token = trim($token);
+        $rawToken = trim($rawToken);
 
-        if ($token === '') {
+        if ($rawToken === '') {
             throw new RuntimeException('Некорректная ссылка подтверждения email.');
         }
 
-        $user = $this->userRepository->findOneByEmailVerificationToken($token);
+        $user = $this->userRepository->findOneByEmailVerificationTokenHash(
+            $this->secureTokenGenerator->hashToken($rawToken),
+        );
 
         if (!$user instanceof User) {
             throw new RuntimeException('Ссылка подтверждения email недействительна.');

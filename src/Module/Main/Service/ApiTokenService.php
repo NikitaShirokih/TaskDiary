@@ -8,6 +8,7 @@ use App\Module\Main\Dto\CreatedApiTokenResult;
 use App\Module\Main\Entity\ApiToken;
 use App\Module\Main\Entity\User;
 use App\Module\Main\Repository\ApiTokenRepository;
+use App\Module\Main\Security\SecureTokenGenerator;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 
@@ -16,6 +17,7 @@ final readonly class ApiTokenService
     public function __construct(
         private ApiTokenRepository $apiTokenRepository,
         private EntityManagerInterface $entityManager,
+        private SecureTokenGenerator $secureTokenGenerator,
     ) {
     }
 
@@ -27,8 +29,8 @@ final readonly class ApiTokenService
             throw new InvalidArgumentException('Введите название токена.');
         }
 
-        $plainToken = 'td_' . bin2hex(random_bytes(32));
-        $tokenHash = hash('sha256', $plainToken);
+        $plainToken = 'td_' . $this->secureTokenGenerator->generateRawToken();
+        $tokenHash = $this->secureTokenGenerator->hashToken($plainToken);
         $apiToken = new ApiToken($user, $name, $tokenHash);
 
         $this->entityManager->persist($apiToken);

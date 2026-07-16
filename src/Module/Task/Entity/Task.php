@@ -92,8 +92,7 @@ class Task
         TaskPriority $priority = TaskPriority::Medium,
     ): self {
         $subtask = self::create($user, $title, $priority);
-        $subtask->parent = $parent;
-        $parent->children->add($subtask);
+        $parent->addChild($subtask);
 
         return $subtask;
     }
@@ -131,23 +130,24 @@ class Task
         $this->category = $category;
     }
 
+    public function changeStatus(TaskStatus $status): void
+    {
+        $this->status = $status;
+    }
+
     public function start(): void
     {
-        if (TaskStatus::Completed === $this->status) {
-            throw new \LogicException('Нельзя возобновить завершённую задачу.');
-        }
-
-        $this->status = TaskStatus::InProgress;
+        $this->changeStatus(TaskStatus::InProgress);
     }
 
     public function complete(): void
     {
-        $this->status = TaskStatus::Completed;
+        $this->changeStatus(TaskStatus::Completed);
     }
 
     public function reopen(): void
     {
-        $this->status = TaskStatus::Waiting;
+        $this->changeStatus(TaskStatus::Waiting);
     }
 
     public function addChild(Task $child): void

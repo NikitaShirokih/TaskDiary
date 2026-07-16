@@ -8,6 +8,7 @@ use App\Module\Main\Dto\ResetPasswordData;
 use App\Module\Main\Entity\User;
 use App\Module\Main\Exception\PasswordResetException;
 use App\Module\Main\Repository\UserRepository;
+use App\Module\Main\Security\SecureTokenGenerator;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 
@@ -20,6 +21,7 @@ final readonly class PasswordResetService
         private EntityManagerInterface $entityManager,
         private UserPasswordHasherInterface $hasher,
         private UserMailer $userMailer,
+        private SecureTokenGenerator $secureTokenGenerator,
         private string $appBaseUrl,
     ) {
     }
@@ -37,8 +39,8 @@ final readonly class PasswordResetService
             return;
         }
 
-        $rawToken = bin2hex(random_bytes(32));
-        $tokenHash = hash('sha256', $rawToken);
+        $rawToken = $this->secureTokenGenerator->generateRawToken();
+        $tokenHash = $this->secureTokenGenerator->hashToken($rawToken);
         $expiresAt = new \DateTimeImmutable(sprintf('+%d hour', self::TOKEN_TTL_HOURS));
 
         $user->requestPasswordReset($tokenHash, $expiresAt);
@@ -79,7 +81,9 @@ final readonly class PasswordResetService
             throw PasswordResetException::invalidToken();
         }
 
-        $user = $this->userRepository->findOneByPasswordResetTokenHash(hash('sha256', $rawToken));
+        $user = $this->userRepository->findOneByPasswordResetTokenHash(
+            $this->secureTokenGenerator->hashToken($rawToken),
+        );
 
         if (!$user instanceof User) {
             throw PasswordResetException::invalidToken();

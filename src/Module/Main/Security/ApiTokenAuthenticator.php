@@ -25,12 +25,19 @@ final class ApiTokenAuthenticator extends AbstractAuthenticator implements Authe
     public function __construct(
         private readonly ApiTokenRepository $apiTokenRepository,
         private readonly EntityManagerInterface $entityManager,
+        private readonly SecureTokenGenerator $secureTokenGenerator,
     ) {
     }
 
     public function supports(Request $request): bool
     {
-        return str_starts_with($request->getPathInfo(), '/api');
+    $path = $request->getPathInfo();
+
+    if (str_starts_with($path, '/api/doc')) {
+        return false;
+    }
+
+    return str_starts_with($path, '/api');
     }
 
     public function authenticate(Request $request): Passport
@@ -47,7 +54,7 @@ final class ApiTokenAuthenticator extends AbstractAuthenticator implements Authe
             throw new CustomUserMessageAuthenticationException('Требуется API token.');
         }
 
-        $tokenHash = hash('sha256', $plainToken);
+        $tokenHash = $this->secureTokenGenerator->hashToken($plainToken);
 
         return new SelfValidatingPassport(
             new UserBadge($tokenHash, function (string $tokenHash): UserInterface {

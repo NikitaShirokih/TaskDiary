@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Module\Task\Service\Api;
 
 use App\Module\Task\Enum\TaskStatus;
 use App\Module\Task\Service\Api\TaskApiRequestHandler;
+use App\Module\Task\Service\TaskDataFactory;
 use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -19,7 +20,7 @@ final class TaskApiRequestHandlerTest extends TestCase
             'title' => '  Important task ', 'description' => ' Details ', 'priority' => 'high',
             'status' => 'in_progress', 'category' => ['name' => ' Work '], 'deadlineAt' => '2030-01-02T12:00:00+00:00',
         ], JSON_THROW_ON_ERROR));
-        $data = (new TaskApiRequestHandler())->handleCreate($request);
+        $data = (new TaskApiRequestHandler(new TaskDataFactory()))->handleCreate($request);
         self::assertSame('Important task', $data->title);
         self::assertSame('Details', $data->description);
         self::assertSame('high', $data->priority);
@@ -32,7 +33,9 @@ final class TaskApiRequestHandlerTest extends TestCase
     public function testInvalidCreateBodyIsRejected(string $body): void
     {
         $this->expectException(InvalidArgumentException::class);
-        (new TaskApiRequestHandler())->handleCreate(Request::create('/api/tasks', 'POST', [], [], [], [], $body));
+        (new TaskApiRequestHandler(new TaskDataFactory()))->handleCreate(
+            Request::create('/api/tasks', 'POST', [], [], [], [], $body),
+        );
     }
 
     /** @return iterable<string, array{string}> */
@@ -44,12 +47,16 @@ final class TaskApiRequestHandlerTest extends TestCase
     public function testInvalidStatusIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        (new TaskApiRequestHandler())->handleStatus(Request::create('/api/tasks/1/status', 'PATCH', [], [], [], [], '{"status":"unknown"}'));
+        (new TaskApiRequestHandler(new TaskDataFactory()))->handleStatus(
+            Request::create('/api/tasks/1/status', 'PATCH', [], [], [], [], '{"status":"unknown"}'),
+        );
     }
 
     public function testValidStatusIsReturned(): void
     {
-        $status = (new TaskApiRequestHandler())->handleStatus(Request::create('/api/tasks/1/status', 'PATCH', [], [], [], [], '{"status":"completed"}'));
+        $status = (new TaskApiRequestHandler(new TaskDataFactory()))->handleStatus(
+            Request::create('/api/tasks/1/status', 'PATCH', [], [], [], [], '{"status":"completed"}'),
+        );
         self::assertSame(TaskStatus::Completed, $status);
     }
 }

@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Module\Main\Service;
 
 use App\Module\Main\Entity\User;
 use App\Module\Main\Repository\UserRepository;
+use App\Module\Main\Security\SecureTokenGenerator;
 use App\Module\Main\Service\EmailVerificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
@@ -13,7 +14,7 @@ use RuntimeException;
 
 final class EmailVerificationServiceTest extends TestCase
 {
-    public function testRequestVerificationCreatesTokenAndFlushes(): void
+    public function testRequestVerificationStoresHashAndReturnsRawToken(): void
     {
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->once())->method('flush');
@@ -22,16 +23,20 @@ final class EmailVerificationServiceTest extends TestCase
         $token = $this->service(entityManager: $entityManager)->requestVerification($user);
 
         self::assertSame(64, strlen($token));
-        self::assertSame($token, $user->getEmailVerificationToken());
+        self::assertNotSame($token, $user->getEmailVerificationTokenHash());
+        self::assertSame(hash('sha256', $token), $user->getEmailVerificationTokenHash());
         self::assertNotNull($user->getEmailVerificationTokenExpiresAt());
     }
 
     public function testVerifyConfirmsUserAndClearsToken(): void
     {
         $user = new User();
-        $user->requestEmailVerification('valid', new \DateTimeImmutable('+1 hour'));
+        $user->requestEmailVerification(hash('sha256', 'valid'), new \DateTimeImmutable('+1 hour'));
         $repository = $this->createMock(UserRepository::class);
-        $repository->expects($this->once())->method('findOneByEmailVerificationToken')->with('valid')->willReturn($user);
+        $repository->expects($this->once())
+            ->method('findOneByEmailVerificationTokenHash')
+            ->with(hash('sha256', 'valid'))
+            ->willReturn($user);
         $entityManager = $this->createMock(EntityManagerInterface::class);
         $entityManager->expects($this->once())->method('flush');
 
@@ -39,7 +44,7 @@ final class EmailVerificationServiceTest extends TestCase
 
         self::assertSame($user, $result);
         self::assertTrue($user->isVerified());
-        self::assertNull($user->getEmailVerificationToken());
+        self::assertNull($user->getEmailVerificationTokenHash());
         self::assertNull($user->getEmailVerificationTokenExpiresAt());
     }
 
@@ -52,8 +57,11 @@ final class EmailVerificationServiceTest extends TestCase
 
     public function testUnknownTokenIsRejected(): void
     {
-        $repository = $this->createStub(UserRepository::class);
-        $repository->method('findOneByEmailVerificationToken')->willReturn(null);
+        $repository = $this->createMock(UserRepository::class);
+        $repository->expects($this->once())
+            ->method('findOneByEmailVerificationTokenHash')
+            ->with(hash('sha256', 'unknown'))
+            ->willReturn(null);
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('недействительна');
         $this->service($repository)->verify('unknown');
@@ -62,9 +70,9 @@ final class EmailVerificationServiceTest extends TestCase
     public function testExpiredTokenIsRejected(): void
     {
         $user = new User();
-        $user->requestEmailVerification('expired', new \DateTimeImmutable('-1 second'));
+        $user->requestEmailVerification(hash('sha256', 'expired'), new \DateTimeImmutable('-1 second'));
         $repository = $this->createStub(UserRepository::class);
-        $repository->method('findOneByEmailVerificationToken')->willReturn($user);
+        $repository->method('findOneByEmailVerificationTokenHash')->willReturn($user);
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage('истёк');
         $this->service($repository)->verify('expired');
@@ -75,6 +83,7 @@ final class EmailVerificationServiceTest extends TestCase
         return new EmailVerificationService(
             $repository ?? $this->createStub(UserRepository::class),
             $entityManager ?? $this->createStub(EntityManagerInterface::class),
+            new SecureTokenGenerator(),
         );
     }
 }

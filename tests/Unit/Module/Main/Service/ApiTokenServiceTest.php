@@ -8,6 +8,7 @@ use App\Module\Main\Dto\CreatedApiTokenResult;
 use App\Module\Main\Entity\ApiToken;
 use App\Module\Main\Entity\User;
 use App\Module\Main\Repository\ApiTokenRepository;
+use App\Module\Main\Security\SecureTokenGenerator;
 use App\Module\Main\Service\ApiTokenService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
@@ -75,7 +76,11 @@ final class ApiTokenServiceTest extends TestCase
 
     private function service(?ApiTokenRepository $repository = null, ?EntityManagerInterface $entityManager = null): ApiTokenService
     {
-        return new ApiTokenService($repository ?? $this->repository(), $entityManager ?? $this->createStub(EntityManagerInterface::class));
+        return new ApiTokenService(
+            $repository ?? $this->repository(),
+            $entityManager ?? $this->createStub(EntityManagerInterface::class),
+            new SecureTokenGenerator(),
+        );
     }
 
     private function repository(?EntityPersister $inner = null): ApiTokenRepository

@@ -35,6 +35,9 @@ security:
                 target: app_login
 
     access_control:
+        - { path: ^/api/doc, roles: PUBLIC_ACCESS }
+        - { path: ^/api/doc\.json, roles: PUBLIC_ACCESS }
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/register, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/email/verify, roles: PUBLIC_ACCESS }
@@ -43,3 +46,4 @@ security:
         - { path: ^/api, roles: ROLE_USER }
         - { path: ^/admin, roles: ROLE_ADMIN}
         - { path: ^/, roles: ROLE_USER }
+        

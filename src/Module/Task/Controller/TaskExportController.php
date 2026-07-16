@@ -35,7 +35,7 @@ final class TaskExportController extends AbstractController
         $tasks = $this->taskExportQueryService->findTaskWithDescendantsForExport($id);
 
         return new JsonResponse(
-            $exportService->exportTasks($task, $tasks),
+            $exportService->exportTasks($tasks),
             Response::HTTP_OK,
             ['Content-Disposition' => 'attachment; filename="task_'.$id.'.json"']
         );

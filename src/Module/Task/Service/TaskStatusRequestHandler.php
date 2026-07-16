@@ -18,7 +18,6 @@ final readonly class TaskStatusRequestHandler
             throw new InvalidArgumentException('Не передан новый статус задачи.');
         }
 
-        return TaskStatus::tryFrom($statusValue)
-            ?? throw new InvalidArgumentException('Некорректный статус задачи.');
+        return TaskStatus::fromInput($statusValue);
     }
 }

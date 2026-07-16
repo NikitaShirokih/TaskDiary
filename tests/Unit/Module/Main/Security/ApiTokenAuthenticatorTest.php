@@ -8,6 +8,7 @@ use App\Module\Main\Entity\ApiToken;
 use App\Module\Main\Entity\User;
 use App\Module\Main\Repository\ApiTokenRepository;
 use App\Module\Main\Security\ApiTokenAuthenticator;
+use App\Module\Main\Security\SecureTokenGenerator;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Persisters\Entity\EntityPersister;
@@ -71,6 +72,24 @@ final class ApiTokenAuthenticatorTest extends TestCase
         self::assertNotNull($apiToken->getLastUsedAt());
     }
 
+    public function testUnknownBearerTokenFailsAuthentication(): void
+    {
+        $inner = $this->createMock(EntityPersister::class);
+        $inner->expects($this->once())
+            ->method('load')
+            ->with(['tokenHash' => hash('sha256', 'unknown-token'), 'revokedAt' => null])
+            ->willReturn(null);
+        $request = Request::create('/api/tasks');
+        $request->headers->set('Authorization', 'Bearer unknown-token');
+        $passport = $this->authenticator($this->repository($inner))->authenticate($request);
+        $badge = $passport->getBadge(UserBadge::class);
+
+        self::assertInstanceOf(UserBadge::class, $badge);
+        $this->expectException(CustomUserMessageAuthenticationException::class);
+
+        ($badge->getUserLoader())($badge->getUserIdentifier());
+    }
+
     public function testAuthenticationFailureReturnsStandardJson401(): void
     {
         $response = $this->authenticator()->onAuthenticationFailure(Request::create('/api'), new AuthenticationException('Bad token'));
@@ -89,7 +108,11 @@ final class ApiTokenAuthenticatorTest extends TestCase
 
     private function authenticator(?ApiTokenRepository $repository = null, ?EntityManagerInterface $entityManager = null): ApiTokenAuthenticator
     {
-        return new ApiTokenAuthenticator($repository ?? $this->repository(), $entityManager ?? $this->createStub(EntityManagerInterface::class));
+        return new ApiTokenAuthenticator(
+            $repository ?? $this->repository(),
+            $entityManager ?? $this->createStub(EntityManagerInterface::class),
+            new SecureTokenGenerator(),
+        );
     }
 
     private function repository(?EntityPersister $inner = null): ApiTokenRepository

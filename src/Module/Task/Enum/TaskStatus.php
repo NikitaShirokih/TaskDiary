@@ -10,6 +10,20 @@ enum TaskStatus: string
     case InProgress = 'in_progress';
     case Completed = 'completed';
 
+    public static function fromInput(
+        string $value,
+        string $invalidMessage = 'Некорректный статус задачи.',
+    ): self {
+        $value = trim($value);
+
+        if ('inProgress' === $value) {
+            $value = self::InProgress->value;
+        }
+
+        return self::tryFrom($value)
+            ?? throw new \InvalidArgumentException($invalidMessage);
+    }
+
     public function label(): string
     {
         return match ($this) {
